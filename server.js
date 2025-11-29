@@ -3,16 +3,25 @@
 // يحتوي على جميع الميزات السابقة + تصميم واجهة محسن
 // تشغيل: npm i express express-session fs-extra multer body-parser
 // node server.js
+
 const express = require("express");
 const path = require('path');
 const fs = require('fs');
 const fse = require('fs-extra');
 const session = require("express-session");
-app.use(session({ secret: "secret123", resave: false, saveUninitialized: true }));
 const multer = require('multer');
 const bodyParser = require('body-parser');
 
+// ⭐ لازم يكون قبل أي use أو أي شيء
 const app = express();
+
+// session
+app.use(session({
+    secret: "secret123",
+    resave: false,
+    saveUninitialized: true
+}));
+
 // حماية لوحة التحكم
 function requireAdmin(req, res, next) {
     if (!req.session || !req.session.admin) {
@@ -28,6 +37,7 @@ const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
 const KHUTBAHS_DIR = path.join(UPLOADS_DIR, 'khutbahs');
 
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
+
 const ADMIN_PASS = process.env.ADMIN_PASS || '1234';
 
 // ensure directories exist
@@ -590,3 +600,4 @@ app.listen(PORT, ()=> {
   console.log(`Server running on http://localhost:${PORT}`);
   console.log(`Admin credentials: ${ADMIN_USER} / ${ADMIN_PASS}`);
 });
+

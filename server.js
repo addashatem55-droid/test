@@ -95,35 +95,94 @@ app.get("/", (req, res) => {
     const videos = load(DATA.videos);
 
     res.send(`
-<html>
+<!DOCTYPE html>
+<html lang="ar">
 <head>
+<meta charset="UTF-8">
 <title>موقع فهد بن عبدالله الجربوع</title>
-<meta charset="utf-8">
 <style>
-body{font-family:Tahoma;padding:20px;background:#fafafa}
-.box{padding:15px;margin:10px;background:#fff;border-radius:10px;border:1px solid #ddd}
-h2{margin-top:40px}
+    body {
+        font-family: "Tahoma";
+        margin: 0;
+        padding: 30px;
+        background: #f1f1f1;
+        direction: rtl;
+    }
+
+    .container {
+        max-width: 900px;
+        margin: auto;
+    }
+
+    h1 {
+        text-align: center;
+        margin-bottom: 40px;
+        font-size: 32px;
+    }
+
+    h2 {
+        margin-top: 40px;
+        font-size: 24px;
+        color: #222;
+    }
+
+    .card {
+        background: #fff;
+        padding: 15px 20px;
+        border-radius: 10px;
+        border: 1px solid #ddd;
+        margin-bottom: 15px;
+        line-height: 1.8;
+    }
+
+    a {
+        color: #7b0080;
+        text-decoration: none;
+    }
+
+    a:hover {
+        text-decoration: underline;
+    }
 </style>
 </head>
 <body>
 
+<div class="container">
+
 <h1>موقع فهد بن عبدالله الجربوع</h1>
 
 <h2>الفتاوى</h2>
-${fatwas.map(f=>`<div class="box"><b>${f.title}</b><br>${f.body}</div>`).join("")}
+${fatwas.length === 0 ? "<div class='card'>لا توجد فتاوى حالياً</div>" : ""}
+${fatwas.map(f => `
+<div class="card">
+<b>${f.title}</b><br>
+${f.body}
+</div>`).join("")}
 
 <h2>المقالات</h2>
-${articles.map(a=>`<div class="box"><b>${a.title}</b><br>${a.body}</div>`).join("")}
+${articles.length === 0 ? "<div class='card'>لا توجد مقالات حالياً</div>" : ""}
+${articles.map(a => `
+<div class="card">
+<b>${a.title}</b><br>
+${a.body}
+</div>`).join("")}
 
 <h2>الفيديوهات</h2>
-${videos.map(v=>`<div class="box"><b>${v.title}</b><br><a href="${v.url}">رابط الفيديو</a></div>`).join("")}
+${videos.length === 0 ? "<div class='card'>لا توجد فيديوهات حالياً</div>" : ""}
+${videos.map(v => `
+<div class="card">
+<b>${v.title}</b><br>
+<a href="${v.url}" target="_blank">رابط الفيديو</a>
+</div>`).join("")}
+
+</div>
 
 <script src="/key"></script>
 
 </body>
 </html>
     `);
-});
+});;
 
 
 // ---------------------
@@ -327,4 +386,5 @@ app.get("/admin/questions/delete/:id", requireAdmin, (req, res) => {
 // ---------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("RUN ON PORT", PORT));
+
 

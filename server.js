@@ -24,8 +24,8 @@ app.use(session({
 
 // حماية لوحة التحكم
 function requireAdmin(req, res, next) {
-    if (!req.session || !req.session.admin) {
-        return res.redirect("/login");
+    if (!req.session || !req.session.isAdmin) {
+        return res.redirect("/admin/login");
     }
     next();
 }
@@ -446,7 +446,7 @@ app.get('/admin/login', (req,res)=>{
 });
 app.post('/admin/login', (req,res)=>{
   const u = (req.body.user||'').trim(), p = (req.body.pass||'').trim();
-  if(u === ADMIN_USER && p === ADMIN_PASS){ req.session.isAdmin = true; return res.redirect('/admin'); }
+  if(u === ADMIN_USER && p === ADMIN_PASS){ req.session.isAdmin = true;return res.redirect('/admin'); }
   res.send(renderClassic('خطأ','<div class="classic-card text-danger">بيانات الدخول خاطئة</div>'));
 });
 app.get('/admin/logout', (req,res)=>{ req.session.isAdmin = false; res.redirect('/admin/login'); });
@@ -600,4 +600,5 @@ app.listen(PORT, ()=> {
   console.log(`Server running on http://localhost:${PORT}`);
   console.log(`Admin credentials: ${ADMIN_USER} / ${ADMIN_PASS}`);
 });
+
 

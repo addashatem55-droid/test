@@ -345,3 +345,111 @@ Instructions:
 // (Insert integration code here if needed)
 // ADMIN PANEL END
 
+// ======================
+// الأسئلة — إدارة كاملة
+// ======================
+
+// قائمة الأسئلة
+app.get('/admin/questions', requireAdmin, (req, res) => {
+  const questions = load('questions');
+
+  let html = `<h1>إدارة الأسئلة</h1><ul>`;
+
+  questions.forEach(q => {
+    html += `
+      <li style="margin-bottom:15px;">
+        <strong>${q.name}</strong><br>
+        <span>${q.question.substring(0, 40)}...</span><br>
+        <a href="/admin/question/${q.id}">عرض السؤال كامل</a>
+      </li>
+    `;
+  });
+
+  html += `</ul>`;
+  res.send(html);
+});
+
+// عرض السؤال الكامل
+app.get('/admin/question/:id', requireAdmin, (req, res) => {
+  const questions = load('questions');
+  const q = questions.find(x => x.id == req.params.id);
+
+  if (!q) return res.send("السؤال غير موجود");
+
+  res.send(`
+    <h1>عرض السؤال الكامل</h1>
+    <p><strong>اسم السائل:</strong> ${q.name}</p>
+    <p><strong>السؤال:</strong></p>
+    <div style="background:#f3f3f3;padding:10px;white-space:pre-wrap;">${q.question}</div>
+    ${q.answer ? `<h3>رد المدير:</h3><div style='background:#e0ffe0;padding:10px;white-space:pre-wrap;'>${q.answer}</div>` : ""}
+    <br><br>
+    <a href="/admin/question/${q.id}/reply">رد على السؤال</a><br>
+    <a href="/admin/question/${q.id}/delete" style="color:red;">حذف السؤال</a><br>
+    <a href="/admin/question/${q.id}/tofatawa" style="color:green;">تحويل إلى فتوى</a><br><br>
+    <a href="/admin/questions">رجوع</a>
+  `);
+});
+
+// صفحة الرد
+app.get('/admin/question/:id/reply', requireAdmin, (req, res) => {
+  const questions = load('questions');
+  const q = questions.find(x => x.id == req.params.id);
+
+  if (!q) return res.send("السؤال غير موجود");
+
+  res.send(`
+    <h1>الرد على السؤال</h1>
+    <form method="POST">
+      <textarea name="answer" style="width:100%;height:200px;">${q.answer || ""}</textarea><br><br>
+      <button>إرسال الرد</button>
+    </form>
+  `);
+});
+
+// إرسال الرد
+app.post('/admin/question/:id/reply', requireAdmin, (req, res) => {
+  const questions = load('questions');
+  const index = questions.findIndex(x => x.id == req.params.id);
+
+  if (index === -1) return res.send("السؤال غير موجود");
+
+  questions[index].answer = req.body.answer;
+  save('questions', questions);
+
+  res.redirect(`/admin/question/${req.params.id}`);
+});
+
+// حذف السؤال
+app.get('/admin/question/:id/delete', requireAdmin, (req, res) => {
+  const questions = load('questions');
+  const newList = questions.filter(q => q.id != req.params.id);
+  save('questions', newList);
+
+  res.redirect('/admin/questions');
+});
+
+// تحويل إلى فتوى
+app.get('/admin/question/:id/tofatawa', requireAdmin, (req, res) => {
+  const questions = load('questions');
+  const q = questions.find(x => x.id == req.params.id);
+
+  if (!q) return res.send("السؤال غير موجود");
+
+  const fatwas = load('fatwas');
+
+  fatwas.push({
+    id: Date.now(),
+    title: "سؤال من: " + q.name,
+    content: q.question + "
+
+---
+الجواب:
+" + (q.answer || "لم يتم الرد بعد"),
+    date: new Date().toISOString()
+  });
+
+  save('fatwas', fatwas);
+
+  res.redirect('/admin/fatwas');
+});
+

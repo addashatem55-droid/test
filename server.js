@@ -65,17 +65,25 @@ function requireAdmin(req, res, next) {
 // ---------------------
 // اختصار Alt+Shift+V
 // ---------------------
-app.get("/key", (req, res) => {
+app.get("/", (req, res) => {
+    const fatwas = load(DATA.fatwas);
+    const articles = load(DATA.articles);
+    const videos = load(DATA.videos);
+
     res.send(`
-<script>
-document.addEventListener("keydown", e => {
-    if (e.altKey && e.shiftKey && e.key.toLowerCase() === "v") {
-        window.location.href = "/admin";
-    }
-});
-</script>
-    `);
-});
+<html>
+<head>
+<title>موقع فهد بن عبدالله الجربوع</title>
+<meta charset="utf-8">
+<style>
+body{font-family:Tahoma;padding:20px;background:#fafafa}
+.box{padding:15px;margin:10px;background:#fff;border-radius:10px;border:1px solid #ddd}
+h2{margin-top:40px}
+</style>
+</head>
+<body>
+...
+
 
 
 // ---------------------
@@ -319,3 +327,4 @@ app.get("/admin/questions/delete/:id", requireAdmin, (req, res) => {
 // ---------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("RUN ON PORT", PORT));
+

@@ -116,6 +116,10 @@ function extractYouTubeID(input){
     return '';
   }
 }
+// ------- توليد معرف رقمي قصير (5 أرقام) -------
+function generateShortId() {
+  return Math.floor(10000 + Math.random() * 90000).toString(); // 10000..99999
+}
 
 // ========== NEW: Classic Najdi Design renderer ==========
 function renderClassic(title, bodyHtml, opts = {}) {
@@ -422,16 +426,74 @@ app.get('/ask-page', (req,res)=>{
     </form></div>`;
   res.send(renderClassic('أرسل سؤال', form));
 });
-app.post('/ask', (req,res)=>{
-  const name = (req.body.name||'').trim();
-  const email = (req.body.email||'').trim();
-  const question = (req.body.question||'').trim();
-  if(!name || !email || !question) return res.send(renderClassic('خطأ','<div class="classic-card text-danger">الرجاء تعبئة جميع الحقول</div>'));
-  const qs = load('questions');
-  const id = Date.now();
-  qs.push({ id, name, email, question, answer:'', status:'new', createdAt: new Date().toISOString() });
+app.post('/ask', (req, res) => {
+  const name = (req.body.name || '').trim();
+  const email = (req.body.email || '').trim();
+  const question = (req.body.question || '').trim();
+
+  if (!name || !email || !question) {
+    return res.send(renderClassic('خطأ', '<div class="classic-card text-danger">الرجاء تعبئة جميع الحقول</div>'));
+  }
+
+  // load existing questions (array)
+  const qs = load('questions') || [];
+
+  // توليد shortId و ضمان عدم التكرار
+  let shortId = generateShortId();
+  while (qs.find(q => String(q.shortId) === String(shortId))) {
+    shortId = generateShortId();
+  }
+
+  const id = Date.now(); // id داخلي (timestamp) - يبقى كما في نظامك
+  const item = {
+    id,
+    shortId,        // الحقل الجديد
+    name,
+    email,
+    question,
+    answer: '',
+    status: 'new',
+    createdAt: new Date().toISOString()
+  };
+
+  qs.push(item);
   save('questions', qs);
-  res.send(renderClassic('تم الاستلام','<div class="classic-card text-success">تم استلام سؤالك وسيشاهده المدير إن شاء الله.</div>'));
+
+  // رابط المتابعة الكامل لمنصة الـ Render أو محلي
+  const fullLink = `${req.protocol}://${req.get('host')}/question/${shortId}`;
+
+  const body = `<div class="classic-card">
+    <h3 class="section-title">تم استلام سؤالك</h3>
+    <p>شكراً لك — تم استلام السؤال. يمكنك متابعة الإجابة عبر الرابط التالي:</p>
+    <div style="background:#f8f8f8;padding:12px;border-radius:8px;word-break:break-all;">
+      <a href="${fullLink}">${fullLink}</a>
+    </div>
+    <p class="mt-3"><a href="/" class="btn btn-gold">العودة للرئيسية</a></p>
+  </div>`;
+
+  res.send(renderClassic('تم الاستلام', body));
+});
+// صفحة عرض السؤال للزائر برابط قصير
+app.get('/question/:shortId', (req, res) => {
+  const shortId = String(req.params.shortId || '');
+  const qs = load('questions') || [];
+  const q = qs.find(x => String(x.shortId) === shortId);
+  if(!q) {
+    return res.status(404).send(renderClassic('غير موجود', '<div class="classic-card">السؤال غير موجود</div>'));
+  }
+
+  const answerBlock = q.answer && q.answer.trim()
+    ? `<h5>الجواب:</h5><div class="card-modern" style="white-space:pre-wrap;">${esc(q.answer)}</div>`
+    : `<p style="color:gray;">لم يتم الرد بعد — راجع هذا الرابط لاحقًا.</p>`;
+
+  const body = `<div class="classic-card">
+    <h3 class="section-title">سؤالك</h3>
+    <p><strong>من:</strong> ${esc(q.name)}</p>
+    <div class="card-modern" style="white-space:pre-wrap;">${esc(q.question)}</div>
+    <div class="mt-3">${answerBlock}</div>
+  </div>`;
+
+  res.send(renderClassic('عرض السؤال', body));
 });
 
 // ========== Admin Routes (unchanged logic) ==========
@@ -541,7 +603,10 @@ app.get('/admin/question/:id', requireAdmin, (req,res)=>{
   if(!q) return res.send(renderClassic('خطأ','<div class="classic-card">السؤال غير موجود</div>', { admin:true }));
   const replyBlock = q.answer ? `<h5>الرد:</h5><div class="p-2" style="background:#e9ffe9;white-space:pre-wrap;">${esc(q.answer)}</div>` : '';
   const body = `<div class="classic-card"><h4 class="section-title">عرض السؤال</h4>
-    <p><strong>الاسم:</strong> ${esc(q.name)}<br><strong>البريد:</strong> ${esc(q.email)}<br><strong>التاريخ:</strong> ${esc(q.createdAt)}</p>
+    <p><strong>الاسم:</strong
+> ${esc(q.name)}<br><strong>البريد:</strong> ${esc(q.email)}<br><strong>التاريخ:</strong> ${esc(q.createdAt)}</p> 
+<p><strong>رابط المتابعة:</strong> <a href="/question/${q.shortId}">/question/${q.shortId}</a></p>
+
     <h5>السؤال:</h5><div class="p-2" style="background:#f8f8f0;white-space:pre-wrap;">${esc(q.question)}</div>
     ${replyBlock}
     <div class="mt-3">

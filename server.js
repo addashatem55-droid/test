@@ -1,14 +1,25 @@
 // server.js
 // النسخة المحسنة بتصميم كلاسيكي نجدي هادئ
-// يحتوي على جميع الميزات السابقة + تصميم واجهة محسن
-// تشغيل: npm i express express-session fs-extra multer body-parser
+// تشغيل: npm i express express-session fs-extra multer body-parser multer-storage-cloudinary cloudinary
 // node server.js
 
-const express = require("express");
-// ================= CLOUDINARY UPLOAD ===================
-const cloudinary = require("cloudinary").v2;
-const { CloudinaryStorage } = require("multer-storage-cloudinary");
+// ========== Core modules ==========
+const path = require('path');
+const fs = require('fs');
+const fse = require('fs-extra');
 
+// ========== Express & middlewares ==========
+const express = require("express");
+const session = require("express-session");
+const bodyParser = require('body-parser');
+const multer = require('multer'); // استدعاء multer قبل أي استخدام
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const cloudinary = require("cloudinary").v2;
+
+// ========== Initialize Express app ==========
+const app = express();
+
+// ========== Cloudinary configuration ==========
 cloudinary.config({
   cloud_name: process.env.CLOUD_NAME || "demo",
   api_key: process.env.CLOUD_KEY || "123",
@@ -23,9 +34,42 @@ const storageCloud = new CloudinaryStorage({
   },
 });
 
-const uploadCloud = multer({ storage: storageCloud });
+const uploadCloud = multer({ storage: storageCloud }); // استخدام multer بعد التعريف
 
-// مسار رفع أي ملف
+// ========== Multer local storage for khutbah PDFs ==========
+const DATA_DIR = path.join(__dirname, 'data');
+const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
+const KHUTBAHS_DIR = path.join(UPLOADS_DIR, 'khutbahs');
+
+fse.ensureDirSync(DATA_DIR);
+fse.ensureDirSync(UPLOADS_DIR);
+fse.ensureDirSync(KHUTBAHS_DIR);
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, KHUTBAHS_DIR),
+  filename: (req, file, cb) => {
+    const safe = Date.now() + '-' + file.originalname.replace(/[^a-zA-Z0-9.\-\u0600-\u06FF ]/g,'_');
+    cb(null, safe);
+  }
+});
+
+const upload = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    if(!/\.pdf$/i.test(file.originalname)) return cb(new Error('Only PDF allowed'));
+    cb(null, true);
+  }
+});
+
+// ========== Express middlewares ==========
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+app.use(session({ secret: 'fahd_classic_secret', resave:false, saveUninitialized:true }));
+app.use('/uploads', express.static(UPLOADS_DIR));
+app.use('/static', express.static(path.join(__dirname,'public')));
+
+// الآن يمكنك استخدام uploadCloud أو upload بدون أي ReferenceError
+// مثال على route للرفع عبر Cloudinary:
 app.post("/upload", uploadCloud.single("file"), (req, res) => {
   if (!req.file)
     return res.json({ success: false, message: "لم يتم رفع الملف" });
@@ -35,6 +79,9 @@ app.post("/upload", uploadCloud.single("file"), (req, res) => {
     url: req.file.path,
     id: req.file.filename,
   });
+});
+
+
 });
 
 const path = require('path');
@@ -632,6 +679,7 @@ app.listen(PORT, ()=> {
   console.log(`Server running on http://localhost:${PORT}`);
   console.log(`Admin credentials: ${ADMIN_USER} / ${ADMIN_PASS}`);
 });
+
 
 
 

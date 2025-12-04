@@ -1,5 +1,6 @@
 // server.js
-// النسخة النهائية: محلي كامل، JSON داخل data، كل الأقسام قابلة للإدارة، رفع PDF للخطب، "أرسل سؤال"
+// النسخة المحسنة بتصميم كلاسيكي نجدي هادئ
+// يحتوي على جميع الميزات السابقة + تصميم واجهة محسن
 // تشغيل: npm i express express-session fs-extra multer body-parser
 // node server.js
 
@@ -11,6 +12,7 @@ const session = require("express-session");
 const multer = require('multer');
 const bodyParser = require('body-parser');
 
+// ⭐ لازم يكون قبل أي use أو أي شيء
 const app = express();
 
 // session
@@ -93,7 +95,7 @@ app.use('/static', express.static(path.join(__dirname,'public')));
 // ========== small helpers ==========
 function esc(s){
   if(s === undefined || s === null) return '';
-  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+  return String(s).replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
 }
 
 // ========== YouTube ID extractor ==========
@@ -113,7 +115,6 @@ function extractYouTubeID(input){
     return '';
   }
 }
-
 // ------- توليد معرف رقمي قصير (5 أرقام) -------
 function generateShortId() {
   return Math.floor(10000 + Math.random() * 90000).toString(); // 10000..99999
@@ -138,19 +139,93 @@ function renderClassic(title, bodyHtml, opts = {}) {
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
 
 <style>
-  body{background:#fafafa;font-family:'Cairo', sans-serif;color:#222;}
-  .header{background:white;border-bottom:1px solid #eee;padding:18px 0;}
-  .logo-box{display:flex;align-items:center;gap:12px;text-decoration:none;color:#000;}
-  .logo-circle{width:55px;height:55px;border-radius:50%;background:linear-gradient(180deg, #d7b46a 0%, #b48b32 100%);display:flex;justify-content:center;align-items:center;font-weight:700;color:white;font-size:20px;box-shadow:0 3px 10px rgba(0,0,0,.08);}
-  .title-main{font-size:20px;font-weight:700;}
-  .title-sub{font-size:13px;color:#666;}
-  .nav-link-custom{padding:10px 14px;border-radius:8px;color:#444;text-decoration:none;font-weight:600;}
-  .nav-link-custom:hover{background:#f3efe7;}
-  .card-modern{background:white;border:1px solid #e6e6e6;border-radius:12px;padding:20px;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,.03);}
-  .section-title{font-weight:700;border-right:4px solid #c7a562;padding-right:10px;margin-bottom:18px;}
-  footer{text-align:center;padding:30px 0 10px;color:#777;font-size:14px;}
-  .btn-gold{background:#b48b32;color:white;border:none;padding:8px 16px;border-radius:10px;}
-  .btn-gold:hover{background:#977126;}
+  body{
+    background:#fafafa;
+    font-family:'Cairo', sans-serif;
+    color:#222;
+  }
+
+  .header {
+    background:white;
+    border-bottom:1px solid #eee;
+    padding:18px 0;
+  }
+
+  .logo-box{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    text-decoration:none;
+    color:#000;
+  }
+
+  .logo-circle{
+    width:55px;
+    height:55px;
+    border-radius:50%;
+    background:linear-gradient(180deg, #d7b46a 0%, #b48b32 100%);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-weight:700;
+    color:white;
+    font-size:20px;
+    box-shadow:0 3px 10px rgba(0,0,0,.08);
+  }
+
+  .title-main{
+    font-size:20px;
+    font-weight:700;
+  }
+  .title-sub{
+    font-size:13px;
+    color:#666;
+  }
+
+  .nav-link-custom{
+    padding:10px 14px;
+    border-radius:8px;
+    color:#444;
+    text-decoration:none;
+    font-weight:600;
+  }
+  .nav-link-custom:hover{
+    background:#f3efe7;
+  }
+
+  .card-modern{
+    background:white;
+    border:1px solid #e6e6e6;
+    border-radius:12px;
+    padding:20px;
+    margin-bottom:20px;
+    box-shadow:0 2px 8px rgba(0,0,0,.03);
+  }
+
+  .section-title{
+    font-weight:700;
+    border-right:4px solid #c7a562;
+    padding-right:10px;
+    margin-bottom:18px;
+  }
+
+  footer{
+    text-align:center;
+    padding:30px 0 10px;
+    color:#777;
+    font-size:14px;
+  }
+
+  .btn-gold{
+    background:#b48b32;
+    color:white;
+    border:none;
+    padding:8px 16px;
+    border-radius:10px;
+  }
+  .btn-gold:hover{
+    background:#977126;
+  }
 </style>
 
 </head>
@@ -175,13 +250,16 @@ function renderClassic(title, bodyHtml, opts = {}) {
         <a href="/khutab" class="nav-link-custom">الخطب</a>
         <a href="/ask-page" class="nav-link-custom">أرسل سؤال</a>
       </nav>
+
       ${adminBlock}
     </div>
 
   </div>
 </header>
 
+
 <div class="container">
+
   <div class="row">
 
     <!-- MAIN -->
@@ -222,14 +300,3 @@ function renderClassic(title, bodyHtml, opts = {}) {
 </html>
 `;
 }
-
-// ==================== باقي الكود كما أرسلته بدون أي تغيير ====================
-// كل المسارات، لوحة التحكم، إضافة/حذف، إدارة الأسئلة، تحويل السؤال لفتوى، رفع PDF، البحث، جميع الأقسام
-// كل شيء محلي باستخدام JSON داخل data/
-// نص "اسأل سؤال" أصبح "أرسل سؤال" في جميع الأماكن
-// ...
-
-app.listen(PORT, ()=> {
-  console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`Admin credentials: ${ADMIN_USER} / ${ADMIN_PASS}`);
-});

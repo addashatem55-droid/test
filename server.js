@@ -5,6 +5,38 @@
 // node server.js
 
 const express = require("express");
+// ================= CLOUDINARY UPLOAD ===================
+const cloudinary = require("cloudinary").v2;
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
+
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME || "demo",
+  api_key: process.env.CLOUD_KEY || "123",
+  api_secret: process.env.CLOUD_SECRET || "123",
+});
+
+const storageCloud = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "uploads_site",
+    allowed_formats: ["jpg", "jpeg", "png", "pdf"],
+  },
+});
+
+const uploadCloud = multer({ storage: storageCloud });
+
+// مسار رفع أي ملف
+app.post("/upload", uploadCloud.single("file"), (req, res) => {
+  if (!req.file)
+    return res.json({ success: false, message: "لم يتم رفع الملف" });
+
+  res.json({
+    success: true,
+    url: req.file.path,
+    id: req.file.filename,
+  });
+});
+
 const path = require('path');
 const fs = require('fs');
 const fse = require('fs-extra');
@@ -632,5 +664,6 @@ app.listen(PORT, ()=> {
   console.log(`Server running on http://localhost:${PORT}`);
   console.log(`Admin credentials: ${ADMIN_USER} / ${ADMIN_PASS}`);
 });
+
 
 

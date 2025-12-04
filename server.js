@@ -42,38 +42,6 @@ const fs = require('fs');
 const fse = require('fs-extra');
 const session = require("express-session");
 const multer = require('multer');
-
-// === Cloudinary Upload System ===
-const cloudinary = require("cloudinary").v2;
-const { CloudinaryStorage } = require("multer-storage-cloudinary");
-
-cloudinary.config({
-    cloud_name: process.env.CLOUD_NAME,
-    api_key: process.env.CLOUD_KEY,
-    api_secret: process.env.CLOUD_SECRET
-});
-
-const storageCloud = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: {
-        folder: "site_uploads",
-        allowed_formats: ["jpg","png","pdf","mp4"]
-    }
-});
-
-const uploadCloud = multer({ storage: storageCloud });
-
-// Upload route
-app.post("/upload", uploadCloud.single("file"), (req, res) => {
-    if(!req.file) return res.json({error:"لم يتم رفع ملف"});
-    res.json({
-        success:true,
-        url:req.file.path,
-        public_id:req.file.filename
-    });
-});
-
-
 const bodyParser = require('body-parser');
 
 // ⭐ لازم يكون قبل أي use أو أي شيء

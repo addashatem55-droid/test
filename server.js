@@ -360,6 +360,7 @@ function renderClassic(title, bodyHtml, opts = {}) {
   '</div>'
 );
 
+
           }).join('');
           suggestionsBox.style.display = 'block';
         }).catch(()=>{ suggestionsBox.style.display='none'; });
@@ -839,4 +840,5 @@ app.listen(PORT, () => {
   console.log(`Admin credentials: ${ADMIN_USER} / ${ADMIN_PASS}`);
   console.log(`Data dir: ${DATA_DIR} (persistent disk: ${USE_PERSISTENT_DISK})`);
 });
+
 

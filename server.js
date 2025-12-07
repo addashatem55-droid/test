@@ -347,7 +347,19 @@ function renderClassic(title, bodyHtml, opts = {}) {
           suggestionsBox.innerHTML = s.map(function(it){
             // escape basic characters in title to reduce XSS risk on client-side rendering
             var safeTitle = (it.title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            return '<div style=\"padding:10px 12px;border-bottom:1px solid #f0f0f0;\"><a href=\"/' + encodeURIComponent(it.type) + '/' + encodeURIComponent(it.id) + '\" style=\"text-decoration:none;color:#222;\"><strong>[' + (it.type || '') + ']</strong> ' + safeTitle + '</a></div>';
+            return (
+  '<div style="padding:10px 12px;border-bottom:1px solid #f0f0f0;">' +
+    '<a href="/' +
+      encodeURIComponent(it.type) +
+      '/' +
+      encodeURIComponent(it.id) +
+    '" style="text-decoration:none;color:#222;">' +
+      '<strong>[' + (it.type || '') + ']</strong> ' +
+      safeTitle +
+    '</a>' +
+  '</div>'
+);
+
           }).join('');
           suggestionsBox.style.display = 'block';
         }).catch(()=>{ suggestionsBox.style.display='none'; });
@@ -827,3 +839,4 @@ app.listen(PORT, () => {
   console.log(`Admin credentials: ${ADMIN_USER} / ${ADMIN_PASS}`);
   console.log(`Data dir: ${DATA_DIR} (persistent disk: ${USE_PERSISTENT_DISK})`);
 });
+

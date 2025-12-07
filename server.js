@@ -1,25 +1,21 @@
 /**
  * server.js
  *
- * مدمج نهائي: كل الميزات -> Supabase (اختياري) + S3 (اختياري) + Persistent Disk (اختياري)
- * محرك بحث محلي محسّن + اقتراحات AJAX + لوحة إدارة + مدير JSON + رفع PDFs + عرض خُطب
- * وتعديل واجهة الهيدر لتطابق الصور التي أرسلتها (شعار على اليمين، subtitle أصغر، روابط ناف بار مُحدّثة)
+ * - Supabase removed entirely.
+ * - aws-sdk and multer-s3 removed.
+ * - Local disk uploads removed.
+ * - Khutbah (PDF) uploads are stored in-memory (base64) inside the khutbahs JSON records.
+ *   This avoids using S3, local disk, or Supabase. (Be aware: storing large files in JSON uses memory/disk in your repo.)
+ * - Viewing a khutbah streams the PDF from the stored base64.
  *
- * تثبيت الحزم المطلوبة (نَصِيحة):
- * npm install express express-session fs-extra multer body-parser @supabase/supabase-js helmet express-rate-limit sanitize-html aws-sdk multer-s3
+ * Note: storing raw PDFs in JSON is simple but not optimal for large files or many files.
+ * If you later want a real persistent store, add cloud storage (S3/Cloudinary/Supabase/etc.).
  *
- * المتغيرات البيئية المقترحة:
- * PORT
- * ADMIN_USER, ADMIN_PASS
- * SESSION_SECRET
- * USE_PERSISTENT_DISK (true/false), PERSISTENT_DATA_PATH (مثال: /mnt/storage)
- * SUPABASE_URL, SUPABASE_KEY, SUPABASE_BUCKET
- * S3_BUCKET, AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY (إن أردت S3)
+ * Install recommended deps:
+ * npm install express express-session fs-extra multer body-parser helmet express-rate-limit sanitize-html
  *
- * تشغيل محلي سريع:
+ * Run:
  * node server.js
- *
- * ملاحظة: إن الملف طويل لاحتوائه كل الميزات؛ اقرأ التعليقات داخل الكود عند الحاجة للتخصيص.
  */
 
 const express = require('express');
@@ -29,54 +25,37 @@ const fse = require('fs-extra');
 const session = require('express-session');
 const multer = require('multer');
 const bodyParser = require('body-parser');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-const sanitizeHtml = require('sanitize-html');
 
-// Optional: Supabase
-let useSupabase = false;
-let supabase = null;
-const SUPABASE_URL = process.env.SUPABASE_URL || '';
-const SUPABASE_KEY = process.env.SUPABASE_KEY || '';
-const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || '';
+// Optional safe requires
+let helmetPkg = null;
+try { helmetPkg = require('helmet'); } catch (e) { console.warn('Optional: helmet not installed'); }
 
-if (SUPABASE_URL && SUPABASE_KEY) {
-  try {
-    const { createClient } = require('@supabase/supabase-js');
-    supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } });
-    useSupabase = true;
-    console.log('Supabase client initialized');
-  } catch (e) {
-    console.warn('Supabase init failed (is @supabase/supabase-js installed?)', e);
-    useSupabase = false;
-  }
+let rateLimitPkg = null;
+try { rateLimitPkg = require('express-rate-limit'); } catch (e) { console.warn('Optional: express-rate-limit not installed'); }
+
+let sanitizeHtmlPkg = null;
+try { sanitizeHtmlPkg = require('sanitize-html'); } catch (e) { 
+  console.warn('Optional: sanitize-html not installed — using fallback sanitizer'); 
+  sanitizeHtmlPkg = null;
 }
-
-// Optional: S3 support (for uploads)
-let useS3 = false;
-let aws, multerS3, s3Client;
-const S3_BUCKET = process.env.S3_BUCKET || '';
-if (S3_BUCKET) {
-  try {
-    aws = require('aws-sdk');
-    multerS3 = require('multer-s3');
-    s3Client = new aws.S3({ region: process.env.AWS_REGION || 'us-east-1' });
-    // AWS credentials are read automatically from env: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
-    useS3 = true;
-    console.log('S3 upload enabled for bucket:', S3_BUCKET);
-  } catch (e) {
-    console.warn('S3 support requested but aws-sdk/multer-s3 not installed', e);
-    useS3 = false;
+function sanitizeHtmlSafe(input) {
+  if (input === undefined || input === null) return '';
+  if (sanitizeHtmlPkg) {
+    try { return sanitizeHtmlPkg(input); } catch (e) { console.warn('sanitize-html failed — fallback'); }
   }
+  return String(input).replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 const app = express();
 
-// Basic security & rate limiting
-app.use(helmet());
+// Security & rate limiting (if available)
+if (helmetPkg) {
+  try { app.use(helmetPkg()); } catch (e) { console.warn('helmet() failed', e && e.message ? e.message : e); }
+}
 app.set('trust proxy', 1);
-const limiter = rateLimit({ windowMs: 10 * 1000, max: 30 });
-app.use(limiter);
+if (rateLimitPkg) {
+  try { app.use(rateLimitPkg({ windowMs: 10 * 1000, max: 30 })); } catch (e) { console.warn('rateLimit failed', e && e.message ? e.message : e); }
+}
 
 // CONFIG
 const PORT = process.env.PORT || 3000;
@@ -85,8 +64,6 @@ const PERSISTENT_DATA_PATH = process.env.PERSISTENT_DATA_PATH || '';
 const BASE_DATA_DIR = USE_PERSISTENT_DISK && PERSISTENT_DATA_PATH ? path.join(PERSISTENT_DATA_PATH, 'data') : path.join(__dirname, 'data');
 
 const DATA_DIR = BASE_DATA_DIR;
-const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
-const KHUTBAHS_DIR = path.join(UPLOADS_DIR, 'khutbahs');
 const BACKUPS_DIR = path.join(DATA_DIR, 'backups');
 
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
@@ -94,8 +71,6 @@ const ADMIN_PASS = process.env.ADMIN_PASS || '1234';
 
 // ensure folders
 fse.ensureDirSync(DATA_DIR);
-fse.ensureDirSync(UPLOADS_DIR);
-fse.ensureDirSync(KHUTBAHS_DIR);
 fse.ensureDirSync(BACKUPS_DIR);
 
 // Session + body parsing
@@ -105,19 +80,18 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'fahd_classic_secret_final',
   resave: false,
   saveUninitialized: true,
-  cookie: { secure: false } // set to true if using HTTPS
+  cookie: { secure: false }
 }));
 
-app.use('/uploads', express.static(UPLOADS_DIR));
 app.use('/static', express.static(path.join(__dirname, 'public')));
 
-// Helpers
+// Helpers (kept names as original)
 function esc(s) {
   if (s === undefined || s === null) return '';
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 }
 function safeFilename(name) {
-  return name.replace(/[^a-zA-Z0-9.\-\u0600-\u06FF _]/g, '_');
+  return String(name || '').replace(/[^a-zA-Z0-9.\-\u0600-\u06FF _]/g, '_');
 }
 function filePath(name) { return path.join(DATA_DIR, name + '.json'); }
 function load(name) {
@@ -127,7 +101,7 @@ function load(name) {
     const txt = fs.readFileSync(p, 'utf8') || '[]';
     return JSON.parse(txt || '[]');
   } catch (e) {
-    console.error('load error', e);
+    console.error('load error', e && e.message ? e.message : e);
     return [];
   }
 }
@@ -140,58 +114,22 @@ function save(name, data) {
     }
     fs.writeFileSync(p, JSON.stringify(data, null, 2), 'utf8');
   } catch (e) {
-    console.error('save error', e);
+    console.error('save error', e && e.message ? e.message : e);
     throw e;
   }
 }
 ['fatwas','articles','videos','khutbahs','questions'].forEach(k => { if(!fs.existsSync(filePath(k))) save(k, []); });
 
-// Multer setup: priority -> S3 (multer-s3) if configured, else Supabase memoryStorage (to upload buffer), else disk storage.
-let upload;
-if (useS3) {
-  upload = multer({
-    storage: multerS3({
-      s3: s3Client,
-      bucket: S3_BUCKET,
-      acl: 'private',
-      contentType: multerS3.AUTO_CONTENT_TYPE,
-      key: function (req, file, cb) {
-        const filename = `${Date.now()}-${safeFilename(file.originalname)}`;
-        cb(null, `khutbahs/${filename}`);
-      }
-    }),
-    limits: { fileSize: 80 * 1024 * 1024 },
-    fileFilter: (req, file, cb) => {
-      if (!/\.pdf$/i.test(file.originalname)) return cb(new Error('Only PDF allowed'));
-      cb(null, true);
-    }
-  });
-  console.log('Using S3 (multer-s3) for uploads');
-} else if (useSupabase && SUPABASE_BUCKET) {
-  upload = multer({
-    storage: multer.memoryStorage(),
-    limits: { fileSize: 80 * 1024 * 1024 },
-    fileFilter: (req, file, cb) => {
-      if (!/\.pdf$/i.test(file.originalname)) return cb(new Error('Only PDF allowed'));
-      cb(null, true);
-    }
-  });
-  console.log('Using Supabase (memory multer) for uploads');
-} else {
-  const storage = multer.diskStorage({
-    destination: (req, file, cb) => { fse.ensureDirSync(KHUTBAHS_DIR); cb(null, KHUTBAHS_DIR); },
-    filename: (req, file, cb) => { cb(null, Date.now() + '-' + safeFilename(file.originalname)); }
-  });
-  upload = multer({
-    storage,
-    limits: { fileSize: 80 * 1024 * 1024 },
-    fileFilter: (req, file, cb) => {
-      if (!/\.pdf$/i.test(file.originalname)) return cb(new Error('Only PDF allowed'));
-      cb(null, true);
-    }
-  });
-  console.log('Using local disk storage for uploads (may be ephemeral on some PaaS unless persistent disk mounted)');
-}
+// Multer setup — MEMORY ONLY (no disk, no S3)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 80 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!/\.pdf$/i.test(file.originalname)) return cb(new Error('Only PDF allowed'));
+    cb(null, true);
+  }
+});
+console.log('Using memory storage for uploads (no S3, no local disk). Uploaded PDFs are stored as base64 inside khutbahs JSON.');
 
 // YouTube extractor + shortId
 function extractYouTubeID(input) {
@@ -208,7 +146,7 @@ function extractYouTubeID(input) {
 }
 function generateShortId() { return Math.floor(10000 + Math.random() * 90000).toString(); }
 
-// Search scoring
+// Search scoring (same as original)
 function scoreItem(qTerms, item) {
   const title = (item.title||'').toLowerCase();
   const content = (item.content||item.description||'').toLowerCase();
@@ -239,26 +177,6 @@ app.get('/api/search', async (req,res) => {
   const tables = ['fatwas','articles','videos','khutbahs'];
   let results = [];
 
-  // Supabase search attempt
-  if (useSupabase) {
-    try {
-      for (const t of tables) {
-        const filter = `%${q}%`;
-        const { data, error } = await supabase
-          .from(t)
-          .select('*')
-          .or(`title.ilike.${filter},content.ilike.${filter}`)
-          .limit(80);
-        if (!error && data && data.length) {
-          data.forEach(item => results.push({ type: t, item, score: scoreItem(qTerms, item) }));
-        }
-      }
-    } catch (e) {
-      console.warn('Supabase search error', e);
-    }
-  }
-
-  // Local JSON fallback
   try {
     for (const t of tables) {
       const items = load(t) || [];
@@ -268,7 +186,7 @@ app.get('/api/search', async (req,res) => {
       });
     }
   } catch (e) {
-    console.error('local search error', e);
+    console.error('local search error', e && e.message ? e.message : e);
   }
 
   results = results.sort((a,b) => b.score - a.score).slice(0,200);
@@ -288,7 +206,6 @@ app.get('/api/suggest', async (req,res) => {
   const qTerms = q.toLowerCase().split(/\s+/).filter(Boolean);
   const tables = ['fatwas','articles','videos','khutbahs'];
   let suggestions = [];
-  // local-only quick suggestions for snappy UX:
   for (const t of tables) {
     const items = load(t) || [];
     items.forEach(item => {
@@ -300,7 +217,7 @@ app.get('/api/suggest', async (req,res) => {
   res.json({ suggestions });
 });
 
-// --- Renderer: header updated to match images (logo on right, subtitle small) ---
+// --- Renderer (kept) ---
 function renderClassic(title, bodyHtml, opts = {}) {
   const adminBlock = opts.admin ? `<a class="btn btn-sm btn-outline-dark" href="/admin">لوحة التحكم</a>` : '';
   const qVal = esc(opts.q || '');
@@ -460,7 +377,7 @@ app.get('/fatwas', (req,res) => {
 app.get('/fatwas/:id', (req,res) => {
   const item = load('fatwas').find(x=>String(x.id)===String(req.params.id));
   if (!item) return res.send(renderClassic('غير موجود','<div class="classic-card">الفتوى غير موجودة</div>'));
-  res.send(renderClassic(item.title, `<div class="classic-card"><h3>${esc(item.title)}</h3><p class="meta-muted">${esc(item.createdAt||'')}</p><div>${sanitizeHtml(item.content||'')}</div></div>`));
+  res.send(renderClassic(item.title, `<div class="classic-card"><h3>${esc(item.title)}</h3><p class="meta-muted">${esc(item.createdAt||'')}</p><div>${sanitizeHtmlSafe(item.content||'')}</div></div>`));
 });
 
 // Articles
@@ -472,7 +389,7 @@ app.get('/articles', (req,res) => {
 app.get('/articles/:id', (req,res) => {
   const item = load('articles').find(x=>String(x.id)===String(req.params.id));
   if (!item) return res.send(renderClassic('غير موجود','<div class="classic-card">المقال غير موجود</div>'));
-  res.send(renderClassic(item.title, `<div class="classic-card"><h3>${esc(item.title)}</h3><p class="meta-muted">${esc(item.createdAt||'')}</p><div>${sanitizeHtml(item.content||'')}</div></div>`));
+  res.send(renderClassic(item.title, `<div class="classic-card"><h3>${esc(item.title)}</h3><p class="meta-muted">${esc(item.createdAt||'')}</p><div>${sanitizeHtmlSafe(item.content||'')}</div></div>`));
 });
 
 // Videos
@@ -502,57 +419,45 @@ app.get('/khutab', (req,res) => {
   res.send(renderClassic('الخطب المفرغة', body));
 });
 
+// View khutbah detail and embed PDF if stored as base64
 app.get('/khutbahs/:id', async (req,res) => {
   const item = load('khutbahs').find(x=>String(x.id)===String(req.params.id));
   if (!item) return res.send(renderClassic('غير موجود','<div class="classic-card">الخطبة غير موجود</div>'));
-  let content = `<div>${sanitizeHtml(item.content||'')}</div>`;
-  // S3 stored? (we stored s3 key in fileSupabaseKey? For S3 we store 's3://bucket/key' in fileS3)
-  if (item.fileS3 && useS3) {
-    // item.fileS3 = 's3://bucket/key'
-    try {
-      const key = item.fileS3.replace(/^s3:\/\/[^\/]+\//, '');
-      // If bucket public, direct url:
-      const region = process.env.AWS_REGION || 'us-east-1';
-      const publicUrl = `https://${S3_BUCKET}.s3.${region}.amazonaws.com/${encodeURIComponent(key)}`;
-      content = `<embed src="${esc(publicUrl)}" type="application/pdf" width="100%" height="600px"/>`;
-    } catch (e) {
-      content = `<div>تعذر عرض الملف من S3.</div>`;
-    }
-  } else if (item.fileSupabaseKey && useSupabase && SUPABASE_BUCKET) {
-    try {
-      const { publicURL } = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(item.fileSupabaseKey);
-      content = `<embed src="${esc(publicURL)}" type="application/pdf" width="100%" height="600px"/>`;
-    } catch (e) {
-      content = `<div>تعذر الحصول على الملف من Supabase.</div>`;
-    }
+  let content = `<div>${sanitizeHtmlSafe(item.content||'')}</div>`;
+  if (item.fileData) {
+    // Serve via embed referencing /khutbahs/:id/pdf
+    content = `<embed src="/khutbahs/${item.id}/pdf" type="application/pdf" width="100%" height="600px"/>`;
   } else if (item.file) {
-    const fileUrl = `/uploads/khutbahs/${path.basename(item.file)}`;
-    content = `<embed src="${fileUrl}" type="application/pdf" width="100%" height="600px"/>`;
+    // backward compatibility if old records had file path (but we removed local disk uploads)
+    content = `<div>ملف موجود: ${esc(item.file)}</div>`;
   }
   res.send(renderClassic(item.title, `<div class="classic-card"><h3>${esc(item.title)}</h3><p class="meta-muted">${esc(item.createdAt||'')}</p>${content}</div>`));
+});
+
+// Stream PDF from stored base64
+app.get('/khutbahs/:id/pdf', (req,res) => {
+  const item = load('khutbahs').find(x=>String(x.id)===String(req.params.id));
+  if (!item) return res.status(404).send('Not found');
+  if (!item.fileData) return res.status(404).send('PDF not available');
+  try {
+    const buf = Buffer.from(item.fileData, 'base64');
+    res.setHeader('Content-Type', item.fileMime || 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(item.fileName||('khutbah-'+item.id+'.pdf'))}"`);
+    return res.send(buf);
+  } catch (e) {
+    console.error('pdf stream error', e);
+    return res.status(500).send('Failed to serve PDF');
+  }
 });
 
 // Search page (server-rendered)
 app.get('/search', async (req,res) => {
   const q = (req.query.q || '').trim();
   if (!q) return res.redirect('/');
-  // reuse /api/search logic by invoking internal search
   try {
-    // call same logic as /api/search
     const qTerms = q.toLowerCase().split(/\s+/).filter(Boolean);
     const tables = ['fatwas','articles','videos','khutbahs'];
     let results = [];
-    if (useSupabase) {
-      try {
-        for (const t of tables) {
-          const filter = `%${q}%`;
-          const { data, error } = await supabase.from(t).select('*').or(`title.ilike.${filter},content.ilike.${filter}`).limit(80);
-          if (!error && data && data.length) {
-            data.forEach(item => results.push({ type: t, item, score: scoreItem(qTerms, item) }));
-          }
-        }
-      } catch(e){}
-    }
     for (const t of tables) {
       const items = load(t) || [];
       items.forEach(item => {
@@ -566,12 +471,12 @@ app.get('/search', async (req,res) => {
     </div>`;
     res.send(renderClassic('بحث', body, { q }));
   } catch (e) {
-    console.error('search page error', e);
+    console.error('search page error', e && e.message ? e.message : e);
     res.send(renderClassic('خطأ', '<div class="classic-card text-danger">حدث خطأ أثناء البحث</div>'));
   }
 });
 
-// Ask (questions) - page + handling (label changed to "أرسل سؤالك")
+// Ask (questions)
 app.get('/ask-page', (req,res) => {
   const form = `<div class="classic-card"><h3 class="section-title">أرسل سؤالك</h3>
     <form action="/ask" method="POST">
@@ -584,9 +489,9 @@ app.get('/ask-page', (req,res) => {
 });
 
 app.post('/ask', async (req,res) => {
-  const name = sanitizeHtml((req.body.name||'').trim());
-  const email = sanitizeHtml((req.body.email||'').trim());
-  const question = sanitizeHtml((req.body.question||'').trim());
+  const name = sanitizeHtmlSafe((req.body.name||'').trim());
+  const email = sanitizeHtmlSafe((req.body.email||'').trim());
+  const question = sanitizeHtmlSafe((req.body.question||'').trim());
   if (!name || !email || !question) {
     return res.send(renderClassic('خطأ', '<div class="classic-card text-danger">الرجاء تعبئة جميع الحقول</div>'));
   }
@@ -595,18 +500,8 @@ app.post('/ask', async (req,res) => {
   while (qs.find(q => String(q.shortId) === String(shortId))) shortId = generateShortId();
   const id = Date.now();
   const item = { id, shortId, name, email, question, answer:'', status:'new', createdAt: new Date().toISOString() };
-
-  // Supabase insert attempt
-  if (useSupabase) {
-    try {
-      const { data, error } = await supabase.from('questions').insert([item]);
-      if (error) console.warn('Supabase insert questions error', error);
-    } catch(e) { console.warn('Supabase insert exception', e); }
-  }
-  // local save as fallback
   qs.push(item);
   save('questions', qs);
-
   const fullLink = `${req.protocol}://${req.get('host')}/question/${shortId}`;
   const body = `<div class="classic-card"><h3 class="section-title">تم استلام سؤالك</h3>
     <p>شكراً لك — تم استلام السؤال. يمكنك متابعة الإجابة عبر الرابط التالي:</p>
@@ -629,7 +524,6 @@ app.get('/question/:shortId', (req,res) => {
 });
 
 // --- Admin: auth, dashboard, manage pages, uploads, JSON manager ---
-
 function requireAdmin(req,res,next) {
   if (!req.session || !req.session.isAdmin) return res.redirect('/admin/login');
   next();
@@ -687,70 +581,35 @@ app.get('/admin/manage/:type', requireAdmin, (req,res) => {
   res.send(renderClassic('ادارة '+type, body, { admin:true }));
 });
 
-// handle add khutbah (with file) - supports S3, Supabase, or local disk
+// handle add khutbah (with file) — store file as base64 inside JSON
 app.post('/admin/add/khutbahs', requireAdmin, upload.single('file'), async (req,res) => {
   try {
     const list = load('khutbahs') || [];
     const id = Date.now();
-    let fileLocal = '';
-    let fileSupabaseKey = '';
-    let fileS3 = '';
+    let fileData = '';
+    let fileName = '';
+    let fileMime = '';
 
-    if (req.file) {
-      // S3 (multer-s3 sets req.file.key)
-      if (useS3 && req.file && req.file.key) {
-        fileS3 = `s3://${S3_BUCKET}/${req.file.key}`;
-      } else if (useSupabase && SUPABASE_BUCKET && req.file.buffer) {
-        const filename = `${Date.now()}-${safeFilename(req.file.originalname)}`;
-        const key = `khutbahs/${filename}`;
-        try {
-          const { data, error } = await supabase.storage.from(SUPABASE_BUCKET).upload(key, req.file.buffer, { contentType: req.file.mimetype, upsert: false });
-          if (error) {
-            console.warn('Supabase upload error', error);
-            // fallback: save buffer to disk
-            const diskPath = path.join(KHUTBAHS_DIR, filename);
-            fs.writeFileSync(diskPath, req.file.buffer);
-            fileLocal = path.join('khutbahs', filename);
-          } else {
-            fileSupabaseKey = key;
-          }
-        } catch (e) {
-          console.warn('Supabase upload exception', e);
-          const filename = `${Date.now()}-${safeFilename(req.file.originalname)}`;
-          const diskPath = path.join(KHUTBAHS_DIR, filename);
-          fs.writeFileSync(diskPath, req.file.buffer);
-          fileLocal = path.join('khutbahs', filename);
-        }
-      } else if (req.file.path) {
-        fileLocal = path.join('khutbahs', path.basename(req.file.path));
-      } else if (req.file.location) {
-        // multer-s3 sometimes sets location
-        fileS3 = req.file.location;
-      }
+    if (req.file && req.file.buffer) {
+      fileData = req.file.buffer.toString('base64');
+      fileName = req.file.originalname || (`khutbah-${id}.pdf`);
+      fileMime = req.file.mimetype || 'application/pdf';
     }
 
     const obj = {
       id,
-      title: sanitizeHtml(req.body.title||''),
-      content: sanitizeHtml(req.body.content||''),
-      file: fileLocal,
-      fileSupabaseKey,
-      fileS3,
+      title: sanitizeHtmlSafe(req.body.title||''),
+      content: sanitizeHtmlSafe(req.body.content||''),
+      fileData,        // base64 string (may be empty)
+      fileName,
+      fileMime,
       createdAt: new Date().toISOString()
     };
     list.push(obj);
     save('khutbahs', list);
-
-    // Optionally insert into Supabase 'khutbahs' table for indexing
-    if (useSupabase) {
-      try {
-        await supabase.from('khutbahs').insert([{ id: obj.id, title: obj.title, content: obj.content, file_key: obj.fileSupabaseKey || obj.file || obj.fileS3 }]);
-      } catch(e) {}
-    }
-
     res.redirect('/admin/manage/khutbahs');
   } catch (e) {
-    console.error('add khutbah error', e);
+    console.error('add khutbah error', e && e.message ? e.message : e);
     res.status(500).send(renderClassic('خطأ','<div class="classic-card text-danger">فشل رفع الخطبة</div>', { admin:true }));
   }
 });
@@ -761,7 +620,7 @@ app.post('/admin/add/:type', requireAdmin, (req,res) => {
   if (type === 'questions') return res.status(400).send('غير مسموح');
   const list = load(type) || [];
   const id = Date.now();
-  const item = { id, title: sanitizeHtml(req.body.title||''), content: sanitizeHtml(req.body.content||''), createdAt: new Date().toISOString() };
+  const item = { id, title: sanitizeHtmlSafe(req.body.title||''), content: sanitizeHtmlSafe(req.body.content||''), createdAt: new Date().toISOString() };
   if (type === 'videos') {
     const url = (req.body.url||'').trim();
     const youtubeId = extractYouTubeID(url);
@@ -770,12 +629,6 @@ app.post('/admin/add/:type', requireAdmin, (req,res) => {
   }
   list.push(item);
   save(type, list);
-  // optionally insert into Supabase
-  if (useSupabase) {
-    (async ()=> {
-      try { await supabase.from(type).insert([item]); } catch(e) {}
-    })();
-  }
   res.redirect('/admin/manage/' + type);
 });
 
@@ -787,7 +640,7 @@ app.post('/admin/delete/:type/:id', requireAdmin, (req,res) => {
   res.redirect('/admin/manage/' + type);
 });
 
-// Admin questions
+// Admin questions listing and management (unchanged)
 app.get('/admin/questions', requireAdmin, (req,res) => {
   const qs = load('questions') || [];
   const rows = qs.map(q=>`<tr><td>${q.id}</td><td>${esc(q.name)}</td><td>${esc(q.email)}</td><td>${esc((q.question||'').substring(0,80))}...</td><td>${esc(q.createdAt||'')}</td><td><a class="btn btn-sm btn-primary" href="/admin/question/${q.id}">عرض</a></td></tr>`).join('');
@@ -832,15 +685,10 @@ app.post('/admin/question/:id/reply', requireAdmin, (req,res) => {
   const qs = load('questions') || [];
   const idx = qs.findIndex(x=>String(x.id)===String(req.params.id));
   if (idx === -1) return res.send(renderClassic('خطأ','<div class="classic-card">السؤال غير موجود</div>', { admin:true }));
-  qs[idx].answer = sanitizeHtml(req.body.answer || '');
+  qs[idx].answer = sanitizeHtmlSafe(req.body.answer || '');
   qs[idx].answeredAt = new Date().toISOString();
   qs[idx].status = 'answered';
   save('questions', qs);
-  if (useSupabase) {
-    (async ()=> {
-      try { await supabase.from('questions').update({ answer: qs[idx].answer, status: 'answered', answeredAt: qs[idx].answeredAt }).eq('id', qs[idx].id); } catch(e) {}
-    })();
-  }
   res.redirect('/admin/question/' + req.params.id);
 });
 
@@ -848,11 +696,6 @@ app.get('/admin/question/:id/delete', requireAdmin, (req,res) => {
   let qs = load('questions') || [];
   qs = qs.filter(x => String(x.id) !== String(req.params.id));
   save('questions', qs);
-  if (useSupabase) {
-    (async ()=> {
-      try { await supabase.from('questions').delete().eq('id', Number(req.params.id)); } catch(e) {}
-    })();
-  }
   res.redirect('/admin/questions');
 });
 
@@ -863,16 +706,10 @@ app.get('/admin/question/:id/tofatwa', requireAdmin, (req,res) => {
   const fatwas = load('fatwas') || [];
   fatwas.push({ id: Date.now(), title: `سؤال من: ${q.name}`, content: `${q.question}\n\n---\nالجواب:\n${q.answer||'لم يتم الرد بعد'}`, createdAt: new Date().toISOString() });
   save('fatwas', fatwas);
-  // Optionally insert into Supabase fatwas table
-  if (useSupabase) {
-    (async ()=> {
-      try { await supabase.from('fatwas').insert([{ id: fatwas[fatwas.length-1].id, title: fatwas[fatwas.length-1].title, content: fatwas[fatwas.length-1].content }]); } catch(e) {}
-    })();
-  }
   res.redirect('/admin/manage/fatwas');
 });
 
-// JSON manager
+// JSON manager (unchanged)
 function safeJsonFilename(name) {
   if (!name || typeof name !== 'string') return null;
   if (!/^[A-Za-z0-9_\-]+$/.test(name)) return null;
@@ -940,7 +777,7 @@ app.post('/admin/json/:name/save', requireAdmin, (req,res) => {
     fs.writeFileSync(path.join(DATA_DIR, name + '.json'), content, 'utf8');
     res.send(renderClassic('تم الحفظ', `<div class="classic-card"><h3 class="section-title">تم الحفظ</h3><p>تم حفظ ${esc(name)}.json بنجاح.</p><p><a href="/admin/json" class="btn btn-outline-brown">العودة</a></p></div>`, { admin:true }));
   } catch (e) {
-    console.error('save json error', e);
+    console.error('save json error', e && e.message ? e.message : e);
     res.status(500).send(renderClassic('خطأ','<div class="classic-card text-danger">فشل الحفظ</div>', { admin:true }));
   }
 });
@@ -966,6 +803,4 @@ app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
   console.log(`Admin credentials: ${ADMIN_USER} / ${ADMIN_PASS}`);
   console.log(`Data dir: ${DATA_DIR} (persistent disk: ${USE_PERSISTENT_DISK})`);
-  if (useSupabase) console.log(`Supabase enabled. Bucket: ${SUPABASE_BUCKET || '(not set)'}`);
-  if (useS3) console.log(`S3 enabled. Bucket: ${S3_BUCKET}`);
 });

@@ -8,8 +8,18 @@
  *   This avoids using S3, local disk, or Supabase. (Be aware: storing large files in JSON uses memory/disk in your repo.)
  * - Viewing a khutbah streams the PDF from the stored base64.
  *
- * Note: storing raw PDFs in JSON is simple but not optimal for large files or many files.
- * If you later want a real persistent store, add cloud storage (S3/Cloudinary/Supabase/etc.).
+ * Improvements / fixes applied:
+ * - Consistent route names for khutbahs (added /khutbahs list and kept /khutab as alias).
+ * - Restricted admin-managed types to allowed set (prevent arbitrary file creation via admin manage).
+ * - Better sanitize-html usage (if installed) with safe allowed tags/attrs; fallback remains simple escape.
+ * - Session cookie secure in production and SameSite set to 'lax'.
+ * - Added 404 and error handlers.
+ * - Safer Content-Disposition filename handling and Content-Length for PDF streaming.
+ * - UI: updated Bootstrap CDN to stable version, minor suggestion box fix (kept minimal).
+ * - Defensive checks & clearer admin messages when collections are empty.
+ * - Small code cleanups and more robust error logging.
+ *
+ * Note: keep monitoring data growth when storing base64 PDFs inside the JSON files.
  *
  * Install recommended deps:
  * npm install express express-session fs-extra multer body-parser helmet express-rate-limit sanitize-html
@@ -34,14 +44,36 @@ let rateLimitPkg = null;
 try { rateLimitPkg = require('express-rate-limit'); } catch (e) { console.warn('Optional: express-rate-limit not installed'); }
 
 let sanitizeHtmlPkg = null;
-try { sanitizeHtmlPkg = require('sanitize-html'); } catch (e) { 
-  console.warn('Optional: sanitize-html not installed — using fallback sanitizer'); 
+try { sanitizeHtmlPkg = require('sanitize-html'); } catch (e) {
+  console.warn('Optional: sanitize-html not installed — using fallback sanitizer');
   sanitizeHtmlPkg = null;
 }
 function sanitizeHtmlSafe(input) {
   if (input === undefined || input === null) return '';
   if (sanitizeHtmlPkg) {
-    try { return sanitizeHtmlPkg(input); } catch (e) { console.warn('sanitize-html failed — fallback'); }
+    try {
+      // Allow a small safe subset for content formatting
+      return sanitizeHtmlPkg(String(input), {
+        allowedTags: ['b','i','strong','em','u','p','br','ul','ol','li','a','h3','h4','h5','blockquote','pre'],
+        allowedAttributes: {
+          a: ['href','target','rel']
+        },
+        transformTags: {
+          'a': function(tagName, attribs) {
+            // enforce safe attributes
+            const href = attribs.href || '';
+            return {
+              tagName: 'a',
+              attribs: {
+                href: href,
+                target: '_blank',
+                rel: 'noopener noreferrer'
+              }
+            };
+          }
+        }
+      });
+    } catch (e) { console.warn('sanitize-html failed — fallback'); }
   }
   return String(input).replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
@@ -80,7 +112,10 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'fahd_classic_secret_final',
   resave: false,
   saveUninitialized: true,
-  cookie: { secure: false }
+  cookie: {
+    secure: (process.env.NODE_ENV === 'production'),
+    sameSite: 'lax'
+  }
 }));
 
 app.use('/static', express.static(path.join(__dirname, 'public')));
@@ -169,6 +204,9 @@ function scoreItem(qTerms, item) {
   return score;
 }
 
+// Allowed admin-managed collections
+const MANAGED_TYPES = ['fatwas','articles','videos','khutbahs'];
+
 // --- API: search + suggest ---
 app.get('/api/search', async (req,res) => {
   const q = (req.query.q || '').trim();
@@ -228,7 +266,7 @@ function renderClassic(title, bodyHtml, opts = {}) {
 <title>${esc(title)} - فهد بن عبدالله الجربوع</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
 <style>
   body{ background:#fafafa; font-family:'Cairo',sans-serif; color:#222; }
   .header{ background:white; border-bottom:1px solid #eee; padding:12px 0; }
@@ -273,7 +311,7 @@ function renderClassic(title, bodyHtml, opts = {}) {
         <a href="/fatwas" class="nav-link-custom">الفتاوى</a>
         <a href="/articles" class="nav-link-custom">المقالات</a>
         <a href="/videos" class="nav-link-custom">الفيديوهات</a>
-        <a href="/khutab" class="nav-link-custom">الخطب</a>
+        <a href="/khutbahs" class="nav-link-custom">الخطب</a>
         <a href="/ask-page" class="nav-link-custom">أرسل سؤالك</a>
       </nav>
 
@@ -294,7 +332,7 @@ function renderClassic(title, bodyHtml, opts = {}) {
           <li class="mb-2"><a href="/fatwas">الفتاوى</a></li>
           <li class="mb-2"><a href="/articles">المقالات</a></li>
           <li class="mb-2"><a href="/videos">الفيديوهات</a></li>
-          <li class="mb-2"><a href="/khutab">الخطب المفرغة</a></li>
+          <li class="mb-2"><a href="/khutbahs">الخطب المفرغة (PDF)</a></li>
           <li class="mb-2"><a href="/ask-page">أرسل سؤالك</a></li>
         </ul>
       </div>
@@ -371,7 +409,7 @@ app.get('/', (req,res) => {
 // Fatwas
 app.get('/fatwas', (req,res) => {
   const items = load('fatwas');
-  const body = `<div class="classic-card"><h3 class="section-title">الفتاوى</h3>${items.map(i=>`<article class="mb-3"><h5><a href="/fatwas/${i.id}">${esc(i.title)}</a></h5><p class="meta-muted">${esc(i.createdAt||'')}</p></article>`).join('')}</div>`;
+  const body = `<div class="classic-card"><h3 class="section-title">الفتاوى</h3>${items.length ? items.map(i=>`<article class="mb-3"><h5><a href="/fatwas/${i.id}">${esc(i.title)}</a></h5><p class="meta-muted">${esc(i.createdAt||'')}</p></article>`).join('') : '<p>لا توجد فتاوى حتى الآن.</p>'}</div>`;
   res.send(renderClassic('الفتاوى', body));
 });
 app.get('/fatwas/:id', (req,res) => {
@@ -383,7 +421,7 @@ app.get('/fatwas/:id', (req,res) => {
 // Articles
 app.get('/articles', (req,res) => {
   const items = load('articles');
-  const body = `<div class="classic-card"><h3 class="section-title">المقالات</h3>${items.map(i=>`<article class="mb-3"><h5><a href="/articles/${i.id}">${esc(i.title)}</a></h5><p class="meta-muted">${esc(i.createdAt||'')}</p></article>`).join('')}</div>`;
+  const body = `<div class="classic-card"><h3 class="section-title">المقالات</h3>${items.length ? items.map(i=>`<article class="mb-3"><h5><a href="/articles/${i.id}">${esc(i.title)}</a></h5><p class="meta-muted">${esc(i.createdAt||'')}</p></article>`).join('') : '<p>لا توجد مقالات حتى الآن.</p>'}</div>`;
   res.send(renderClassic('المقالات', body));
 });
 app.get('/articles/:id', (req,res) => {
@@ -395,7 +433,7 @@ app.get('/articles/:id', (req,res) => {
 // Videos
 app.get('/videos', (req,res) => {
   const items = load('videos');
-  const body = `<div class="classic-card"><h3 class="section-title">الفيديوهات</h3>${items.map(i=>`<div class="mb-3"><h5>${esc(i.title)}</h5><p class="meta-muted">${esc(i.createdAt||'')}</p><p><a href="/videos/${i.id}" class="btn btn-outline-brown btn-sm">مشاهدة</a></p></div>`).join('')}</div>`;
+  const body = `<div class="classic-card"><h3 class="section-title">الفيديوهات</h3>${items.length ? items.map(i=>`<div class="mb-3"><h5>${esc(i.title)}</h5><p class="meta-muted">${esc(i.createdAt||'')}</p><p><a href="/videos/${i.id}" class="btn btn-outline-brown btn-sm">مشاهدة</a></p></div>`).join('') : '<p>لا توجد فيديوهات حتى الآن.</p>'}</div>`;
   res.send(renderClassic('الفيديوهات', body));
 });
 app.get('/videos/:id', (req,res) => {
@@ -412,12 +450,14 @@ app.get('/videos/:id', (req,res) => {
   res.send(renderClassic(item.title, body));
 });
 
-// Khutbahs
-app.get('/khutab', (req,res) => {
+// Khutbahs list (canonical) and alias
+app.get('/khutbahs', (req,res) => {
   const items = load('khutbahs');
-  const body = `<div class="classic-card"><h3 class="section-title">الخطب المفرغة (PDF)</h3>${items.map(i=>`<div class="mb-3"><h5>${esc(i.title)}</h5><p><a href="/khutbahs/${i.id}" class="btn btn-outline-brown btn-sm">عرض / تحميل PDF</a></p></div>`).join('')}</div>`;
+  const body = `<div class="classic-card"><h3 class="section-title">الخطب المفرغة (PDF)</h3>${items.length ? items.map(i=>`<div class="mb-3"><h5>${esc(i.title)}</h5><p><a href="/khutbahs/${i.id}" class="btn btn-outline-brown btn-sm">عرض / تحميل PDF</a></p></div>`).join('') : '<p>لا توجد خطب حتى الآن.</p>'}</div>`;
   res.send(renderClassic('الخطب المفرغة', body));
 });
+// legacy alias kept
+app.get('/khutab', (req, res) => res.redirect(301, '/khutbahs'));
 
 // View khutbah detail and embed PDF if stored as base64
 app.get('/khutbahs/:id', async (req,res) => {
@@ -442,7 +482,9 @@ app.get('/khutbahs/:id/pdf', (req,res) => {
   try {
     const buf = Buffer.from(item.fileData, 'base64');
     res.setHeader('Content-Type', item.fileMime || 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(item.fileName||('khutbah-'+item.id+'.pdf'))}"`);
+    const safeName = safeFilename(item.fileName || `khutbah-${item.id}.pdf`);
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(path.basename(safeName))}"`);
+    res.setHeader('Content-Length', String(buf.length));
     return res.send(buf);
   } catch (e) {
     console.error('pdf stream error', e);
@@ -560,13 +602,14 @@ app.get('/admin', requireAdmin, (req,res) => {
 
 app.get('/admin/manage/:type', requireAdmin, (req,res) => {
   const type = req.params.type;
+  if (!MANAGED_TYPES.includes(type)) return res.status(404).send(renderClassic('خطأ','<div class="classic-card">نوع غير معروف</div>', { admin:true }));
   const items = load(type) || [];
   let addFields = '';
   if (type === 'videos') addFields = `<div class="mb-2"><label>رابط يوتيوب أو ID</label><input name="url" class="form-control" placeholder="https://www.youtube.com/watch?v=... أو ID"></div>`;
   if (type === 'khutbahs') addFields = `<div class="mb-2"><label>رفع ملف PDF</label><input type="file" name="file" accept="application/pdf" class="form-control"></div>`;
-  const rows = items.map(i=>`<tr><td>${i.id}</td><td>${esc(i.title||i.name||'')}</td><td>${esc(i.createdAt||'')}</td><td>
+  const rows = items.length ? items.map(i=>`<tr><td>${i.id}</td><td>${esc(i.title||i.name||'')}</td><td>${esc(i.createdAt||'')}</td><td>
     <form method="post" action="/admin/delete/${type}/${i.id}" onsubmit="return confirm('حذف؟')"><button class="btn btn-sm btn-danger">حذف</button></form>
-  </td></tr>`).join('');
+  </td></tr>`).join('') : `<tr><td colspan="4">لا توجد عناصر حتى الآن.</td></tr>`;
   const addForm = (type !== 'questions') ? `<h5 class="mt-3">إضافة جديد</h5>
     <form method="post" action="/admin/add/${type}" ${type==='khutbahs'?'enctype="multipart/form-data"':''}>
       <div class="mb-2"><input name="title" class="form-control" placeholder="العنوان" required></div>
@@ -614,10 +657,10 @@ app.post('/admin/add/khutbahs', requireAdmin, upload.single('file'), async (req,
   }
 });
 
-// generic add (videos)
+// generic add (videos, fatwas, articles)
 app.post('/admin/add/:type', requireAdmin, (req,res) => {
   const type = req.params.type;
-  if (type === 'questions') return res.status(400).send('غير مسموح');
+  if (!MANAGED_TYPES.includes(type) || type === 'khutbahs' || type === 'questions') return res.status(400).send('غير مسموح');
   const list = load(type) || [];
   const id = Date.now();
   const item = { id, title: sanitizeHtmlSafe(req.body.title||''), content: sanitizeHtmlSafe(req.body.content||''), createdAt: new Date().toISOString() };
@@ -634,6 +677,7 @@ app.post('/admin/add/:type', requireAdmin, (req,res) => {
 
 app.post('/admin/delete/:type/:id', requireAdmin, (req,res) => {
   const type = req.params.type;
+  if (!MANAGED_TYPES.includes(type)) return res.status(400).send('غير مسموح');
   let list = load(type) || [];
   list = list.filter(i => String(i.id) !== String(req.params.id));
   save(type, list);
@@ -643,7 +687,7 @@ app.post('/admin/delete/:type/:id', requireAdmin, (req,res) => {
 // Admin questions listing and management (unchanged)
 app.get('/admin/questions', requireAdmin, (req,res) => {
   const qs = load('questions') || [];
-  const rows = qs.map(q=>`<tr><td>${q.id}</td><td>${esc(q.name)}</td><td>${esc(q.email)}</td><td>${esc((q.question||'').substring(0,80))}...</td><td>${esc(q.createdAt||'')}</td><td><a class="btn btn-sm btn-primary" href="/admin/question/${q.id}">عرض</a></td></tr>`).join('');
+  const rows = qs.map(q=>`<tr><td>${q.id}</td><td>${esc(q.name)}</td><td>${esc(q.email)}</td><td>${esc((q.question||'').substring(0,80))}...</td><td>${esc(q.createdAt||'')}</td><td><a class="btn btn-sm btn-primary" href="/admin/question/${q.id}">عرض</a></td></tr>`).join('') || `<tr><td colspan="6">لا توجد أسئلة</td></tr>`;
   const body = `<div class="classic-card"><h3 class="section-title">أسئلة الزوار</h3><table class="table"><thead><tr><th>ID</th><th>الاسم</th><th>البريد</th><th>مقتطف</th><th>التاريخ</th><th>عرض</th></tr></thead><tbody>${rows}</tbody></table><p><a href="/admin" class="btn btn-outline-brown">رجوع</a></p></div>`;
   res.send(renderClassic('اسئلة الزوار', body, { admin:true }));
 });
@@ -725,7 +769,7 @@ app.get('/admin/json', requireAdmin, (req,res) => {
   const rows = files.map(f => `<tr><td>${esc(f.name)}</td><td>${esc(f.mtime)}</td><td>${f.size} بايت</td><td>
     <a class="btn btn-sm btn-outline-brown" href="/admin/json/${encodeURIComponent(f.name)}">تحرير</a>
     <a class="btn btn-sm btn-secondary" href="/admin/json/${encodeURIComponent(f.name)}/download">تحميل</a>
-    </td></tr>`).join('');
+    </td></tr>`).join('') || '<tr><td colspan="4">لا توجد ملفات JSON</td></tr>';
   const body = `<div class="classic-card"><h3 class="section-title">ملفات JSON</h3>
     <table class="table"><thead><tr><th>الاسم</th><th>آخر تعديل</th><th>الحجم</th><th>إجراء</th></tr></thead><tbody>${rows}</tbody></table>
     <h5 class="mt-3">إنشاء ملف JSON جديد</h5>
@@ -795,6 +839,21 @@ app.post('/admin/json/create', requireAdmin, (req,res) => {
   } else {
     fs.writeFileSync(p, JSON.stringify({}, null, 2), 'utf8');
     res.redirect('/admin/json');
+  }
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).send(renderClassic('غير موجود', '<div class="classic-card">الصفحة غير موجودة</div>'));
+});
+
+// error handler
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err && err.stack ? err.stack : err);
+  try {
+    res.status(500).send(renderClassic('خطأ', '<div class="classic-card text-danger">حدث خطأ في الخادم. الرجاء المحاولة لاحقًا.</div>'));
+  } catch (e) {
+    res.status(500).send('Server error');
   }
 });
 

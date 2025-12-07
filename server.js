@@ -1,18 +1,13 @@
 /**
  * server.js
  *
- * - Supabase removed entirely.
- * - aws-sdk and multer-s3 removed.
- * - Local disk uploads removed.
- * - Khutbah (PDF) uploads are stored in-memory (base64) inside the khutbahs JSON records.
- *   This avoids using S3, local disk, or Supabase. (Be aware: storing large files in JSON uses memory/disk in your repo.)
- * - Viewing a khutbah streams the PDF from the stored base64.
+ * Full server file (Supabase removed, no aws-sdk/multer-s3, no local disk uploads).
+ * - Uploaded PDFs are stored in-memory (base64) inside khutbahs JSON records.
+ * - Optional modules (helmet, express-rate-limit, sanitize-html) are required with try/catch.
  *
- * Note: storing raw PDFs in JSON is simple but not optimal for large files or many files.
- * If you later want a real persistent store, add cloud storage (S3/Cloudinary/Supabase/etc.).
- *
- * Install recommended deps:
- * npm install express express-session fs-extra multer body-parser helmet express-rate-limit sanitize-html
+ * Install recommended dependencies:
+ * npm install express express-session fs-extra multer body-parser
+ * Optional (recommended): helmet express-rate-limit sanitize-html
  *
  * Run:
  * node server.js
@@ -34,27 +29,34 @@ let rateLimitPkg = null;
 try { rateLimitPkg = require('express-rate-limit'); } catch (e) { console.warn('Optional: express-rate-limit not installed'); }
 
 let sanitizeHtmlPkg = null;
-try { sanitizeHtmlPkg = require('sanitize-html'); } catch (e) { 
-  console.warn('Optional: sanitize-html not installed — using fallback sanitizer'); 
-  sanitizeHtmlPkg = null;
-}
+try { sanitizeHtmlPkg = require('sanitize-html'); } catch (e) { console.warn('Optional: sanitize-html not installed — using fallback sanitizer'); sanitizeHtmlPkg = null; }
+
 function sanitizeHtmlSafe(input) {
   if (input === undefined || input === null) return '';
   if (sanitizeHtmlPkg) {
     try { return sanitizeHtmlPkg(input); } catch (e) { console.warn('sanitize-html failed — fallback'); }
   }
+  // very small fallback: escape < and >
   return String(input).replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 const app = express();
 
-// Security & rate limiting (if available)
+// Apply optional security middleware if present
 if (helmetPkg) {
   try { app.use(helmetPkg()); } catch (e) { console.warn('helmet() failed', e && e.message ? e.message : e); }
+} else {
+  console.warn('helmet not active (module missing)');
 }
+
 app.set('trust proxy', 1);
 if (rateLimitPkg) {
-  try { app.use(rateLimitPkg({ windowMs: 10 * 1000, max: 30 })); } catch (e) { console.warn('rateLimit failed', e && e.message ? e.message : e); }
+  try {
+    const limiter = rateLimitPkg({ windowMs: 10 * 1000, max: 30 });
+    app.use(limiter);
+  } catch (e) { console.warn('express-rate-limit failed', e && e.message ? e.message : e); }
+} else {
+  console.warn('express-rate-limit not active (module missing)');
 }
 
 // CONFIG
@@ -69,13 +71,14 @@ const BACKUPS_DIR = path.join(DATA_DIR, 'backups');
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASS = process.env.ADMIN_PASS || '1234';
 
-// ensure folders
+// ensure folders exist
 fse.ensureDirSync(DATA_DIR);
 fse.ensureDirSync(BACKUPS_DIR);
 
-// Session + body parsing
+// Body + session
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+
 app.use(session({
   secret: process.env.SESSION_SECRET || 'fahd_classic_secret_final',
   resave: false,
@@ -85,7 +88,7 @@ app.use(session({
 
 app.use('/static', express.static(path.join(__dirname, 'public')));
 
-// Helpers (kept names as original)
+// Helpers
 function esc(s) {
   if (s === undefined || s === null) return '';
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -118,9 +121,11 @@ function save(name, data) {
     throw e;
   }
 }
+
+// Ensure initial JSON files exist
 ['fatwas','articles','videos','khutbahs','questions'].forEach(k => { if(!fs.existsSync(filePath(k))) save(k, []); });
 
-// Multer setup — MEMORY ONLY (no disk, no S3)
+// Multer: memory storage only (no local disk, no S3)
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 80 * 1024 * 1024 },
@@ -129,7 +134,7 @@ const upload = multer({
     cb(null, true);
   }
 });
-console.log('Using memory storage for uploads (no S3, no local disk). Uploaded PDFs are stored as base64 inside khutbahs JSON.');
+console.log('Using memory multer storage for PDF uploads (saved as base64 inside JSON).');
 
 // YouTube extractor + shortId
 function extractYouTubeID(input) {
@@ -146,14 +151,14 @@ function extractYouTubeID(input) {
 }
 function generateShortId() { return Math.floor(10000 + Math.random() * 90000).toString(); }
 
-// Search scoring (same as original)
+// Search scoring
 function scoreItem(qTerms, item) {
   const title = (item.title||'').toLowerCase();
   const content = (item.content||item.description||'').toLowerCase();
   let score = 0;
   for (const t of qTerms) {
     if (!t) continue;
-    const re = new RegExp(t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'g');
+    const re = new RegExp(t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g');
     const tCountTitle = (title.match(re) || []).length;
     const tCountContent = (content.match(re) || []).length;
     score += tCountTitle * 8 + tCountContent * 2;
@@ -176,7 +181,6 @@ app.get('/api/search', async (req,res) => {
   const qTerms = q.toLowerCase().split(/\s+/).filter(Boolean);
   const tables = ['fatwas','articles','videos','khutbahs'];
   let results = [];
-
   try {
     for (const t of tables) {
       const items = load(t) || [];
@@ -188,7 +192,6 @@ app.get('/api/search', async (req,res) => {
   } catch (e) {
     console.error('local search error', e && e.message ? e.message : e);
   }
-
   results = results.sort((a,b) => b.score - a.score).slice(0,200);
   const out = results.map(r => ({
     type: r.type,
@@ -217,7 +220,7 @@ app.get('/api/suggest', async (req,res) => {
   res.json({ suggestions });
 });
 
-// --- Renderer (kept) ---
+// --- Renderer (full HTML output with layout fixes) ---
 function renderClassic(title, bodyHtml, opts = {}) {
   const adminBlock = opts.admin ? `<a class="btn btn-sm btn-outline-dark" href="/admin">لوحة التحكم</a>` : '';
   const qVal = esc(opts.q || '');
@@ -230,24 +233,39 @@ function renderClassic(title, bodyHtml, opts = {}) {
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
 <style>
-  body{ background:#fafafa; font-family:'Cairo',sans-serif; color:#222; }
+  /* Layout fixes */
+  body{ background:#fafafa; font-family:'Cairo',sans-serif; color:#222; margin:0; padding:0; }
+  .content-wrap { min-height: calc(100vh - 200px); } /* keeps footer near bottom */
+  .container { max-width: 1200px; margin: 0 auto; } /* constrain wide screens */
+  .row { align-items: flex-start; } /* align sidebar & main to top */
+
   .header{ background:white; border-bottom:1px solid #eee; padding:12px 0; }
-  .header .container { display:flex; align-items:center; justify-content:space-between; flex-direction:row-reverse; gap:12px; }
+  .header .container { display:flex; align-items:center; justify-content:space-between; gap:12px; }
   .logo-box{ display:flex; align-items:center; gap:12px; text-decoration:none; color:#000; }
   .logo-circle{ width:50px; height:50px; border-radius:50%; background:linear-gradient(180deg,#d7b46a 0%,#b48b32 100%); display:flex; justify-content:center; align-items:center; color:white; font-weight:700; font-size:20px; box-shadow:0 3px 10px rgba(0,0,0,.06); }
   .title-main{ font-size:18px; font-weight:700; color:#111; line-height:1; }
   .title-sub{ font-size:12px; color:#8b8b8b; margin-top:2px; }
+
   .nav-link-custom{ padding:10px 14px; border-radius:8px; color:#666; text-decoration:none; font-weight:600; }
   .nav-link-custom:hover{ background:#f7f6f3; color:#444; }
-  .card-modern{ background:white; border:1px solid #e6e6e6; border-radius:12px; padding:20px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,.03); }
+
+  .card-modern, .classic-card { background:white; border:1px solid #e6e6e6; border-radius:12px; padding:20px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,.03); }
   .section-title{ font-weight:700; border-right:4px solid #c7a562; padding-right:10px; margin-bottom:18px; }
-  footer{ text-align:center; padding:30px 0 10px; color:#777; font-size:14px; }
+  footer{ text-align:center; padding:30px 0 10px; color:#777; font-size:14px; margin-top:30px; }
+
   .btn-gold{ background:#b48b32; color:white; border:none; padding:8px 16px; border-radius:10px; }
   .btn-gold:hover{ background:#977126; }
   .btn-brown, .btn-outline-brown { color: #5a3f1a; border-color: #c7a562; }
   .btn-brown { background: #f5efe6; border-radius:6px; }
+
   .search-suggestions{ position:absolute; z-index:1200; width:100%; background:white; border:1px solid #eee; border-radius:6px; max-height:320px; overflow:auto; box-shadow:0 6px 18px rgba(0,0,0,.08);}
-  .search-input { min-width: 320px; max-width: 520px; }
+  .search-input { min-width: 260px; max-width: 420px; } /* narrower to prevent layout shift */
+
+  /* Small screens: keep nav compact */
+  @media (max-width: 767px) {
+    .header .container { flex-direction: column; align-items: stretch; gap:8px; }
+    .search-input { width:100%; max-width:100%; min-width: auto; }
+  }
 </style>
 </head>
 <body>
@@ -262,7 +280,7 @@ function renderClassic(title, bodyHtml, opts = {}) {
     </a>
 
     <div style="display:flex; align-items:center; gap:10px; width:100%; justify-content:flex-start;">
-      <div style="position:relative; width:100%; max-width:520px;">
+      <div style="position:relative; width:100%; max-width:420px;">
         <form id="searchForm" action="/search" method="GET">
           <input id="searchInput" name="q" class="form-control search-input" type="search" placeholder="ابحث هنا عن الفتاوى، المقالات، الفيديوهات أو الخطب..." autocomplete="off" value="${qVal}" />
         </form>
@@ -282,6 +300,7 @@ function renderClassic(title, bodyHtml, opts = {}) {
   </div>
 </header>
 
+<main class="content-wrap">
 <div class="container">
   <div class="row">
     <div class="col-lg-8">
@@ -305,6 +324,7 @@ function renderClassic(title, bodyHtml, opts = {}) {
     </div>
   </div>
 </div>
+</main>
 
 <footer>© ${new Date().getFullYear()} فهد بن عبدالله الجربوع — جميع الحقوق محفوظة</footer>
 
@@ -312,7 +332,7 @@ function renderClassic(title, bodyHtml, opts = {}) {
   const input = document.getElementById('searchInput');
   const suggestionsBox = document.getElementById('suggestions');
   let timer = null;
-  input.addEventListener('input', () => {
+  input && input.addEventListener('input', () => {
     const q = input.value.trim();
     if (timer) clearTimeout(timer);
     if (!q) { suggestionsBox.style.display='none'; suggestionsBox.innerHTML=''; return; }
@@ -322,7 +342,7 @@ function renderClassic(title, bodyHtml, opts = {}) {
         .then(data => {
           const s = data.suggestions || [];
           if (!s.length) { suggestionsBox.style.display='none'; suggestionsBox.innerHTML=''; return; }
-          suggestionsBox.innerHTML = s.map(it => \`<div style="padding:10px 12px;border-bottom:1px solid #f0f0f0;"><a href="/\${it.type}/\${it.id}" style="text-decoration:none;color:#222;"><strong>[\${it.type}]</strong> \${it.title}</a></div>\`).join('');
+          suggestionsBox.innerHTML = s.map(it => `<div style="padding:10px 12px;border-bottom:1px solid #f0f0f0;"><a href="/${it.type}/${it.id}" style="text-decoration:none;color:#222;"><strong>[${it.type}]</strong> ${it.title}</a></div>`).join('');
           suggestionsBox.style.display = 'block';
         }).catch(()=>{ suggestionsBox.style.display='none'; });
     }, 220);
@@ -332,7 +352,7 @@ function renderClassic(title, bodyHtml, opts = {}) {
       suggestionsBox.style.display = 'none';
     }
   });
-  input.addEventListener('keydown', (e) => {
+  input && input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') document.getElementById('searchForm').submit();
   });
 </script>
@@ -412,29 +432,25 @@ app.get('/videos/:id', (req,res) => {
   res.send(renderClassic(item.title, body));
 });
 
-// Khutbahs
+// Khutbahs list & detail (PDFs served from base64)
 app.get('/khutab', (req,res) => {
   const items = load('khutbahs');
   const body = `<div class="classic-card"><h3 class="section-title">الخطب المفرغة (PDF)</h3>${items.map(i=>`<div class="mb-3"><h5>${esc(i.title)}</h5><p><a href="/khutbahs/${i.id}" class="btn btn-outline-brown btn-sm">عرض / تحميل PDF</a></p></div>`).join('')}</div>`;
   res.send(renderClassic('الخطب المفرغة', body));
 });
 
-// View khutbah detail and embed PDF if stored as base64
 app.get('/khutbahs/:id', async (req,res) => {
   const item = load('khutbahs').find(x=>String(x.id)===String(req.params.id));
   if (!item) return res.send(renderClassic('غير موجود','<div class="classic-card">الخطبة غير موجود</div>'));
   let content = `<div>${sanitizeHtmlSafe(item.content||'')}</div>`;
   if (item.fileData) {
-    // Serve via embed referencing /khutbahs/:id/pdf
     content = `<embed src="/khutbahs/${item.id}/pdf" type="application/pdf" width="100%" height="600px"/>`;
   } else if (item.file) {
-    // backward compatibility if old records had file path (but we removed local disk uploads)
     content = `<div>ملف موجود: ${esc(item.file)}</div>`;
   }
   res.send(renderClassic(item.title, `<div class="classic-card"><h3>${esc(item.title)}</h3><p class="meta-muted">${esc(item.createdAt||'')}</p>${content}</div>`));
 });
 
-// Stream PDF from stored base64
 app.get('/khutbahs/:id/pdf', (req,res) => {
   const item = load('khutbahs').find(x=>String(x.id)===String(req.params.id));
   if (!item) return res.status(404).send('Not found');
@@ -445,12 +461,12 @@ app.get('/khutbahs/:id/pdf', (req,res) => {
     res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(item.fileName||('khutbah-'+item.id+'.pdf'))}"`);
     return res.send(buf);
   } catch (e) {
-    console.error('pdf stream error', e);
+    console.error('pdf stream error', e && e.message ? e.message : e);
     return res.status(500).send('Failed to serve PDF');
   }
 });
 
-// Search page (server-rendered)
+// Search page
 app.get('/search', async (req,res) => {
   const q = (req.query.q || '').trim();
   if (!q) return res.redirect('/');
@@ -523,11 +539,12 @@ app.get('/question/:shortId', (req,res) => {
   res.send(renderClassic('عرض السؤال', body));
 });
 
-// --- Admin: auth, dashboard, manage pages, uploads, JSON manager ---
+// --- Admin routes ---
 function requireAdmin(req,res,next) {
   if (!req.session || !req.session.isAdmin) return res.redirect('/admin/login');
   next();
 }
+
 app.get('/admin/login', (req,res) => {
   const form = `<div class="classic-card"><h3 class="section-title">دخول المدير</h3>
     <form method="POST" action="/admin/login">
@@ -581,7 +598,7 @@ app.get('/admin/manage/:type', requireAdmin, (req,res) => {
   res.send(renderClassic('ادارة '+type, body, { admin:true }));
 });
 
-// handle add khutbah (with file) — store file as base64 inside JSON
+// add khutbah (store file base64 in JSON)
 app.post('/admin/add/khutbahs', requireAdmin, upload.single('file'), async (req,res) => {
   try {
     const list = load('khutbahs') || [];
@@ -600,7 +617,7 @@ app.post('/admin/add/khutbahs', requireAdmin, upload.single('file'), async (req,
       id,
       title: sanitizeHtmlSafe(req.body.title||''),
       content: sanitizeHtmlSafe(req.body.content||''),
-      fileData,        // base64 string (may be empty)
+      fileData,
       fileName,
       fileMime,
       createdAt: new Date().toISOString()
@@ -614,7 +631,7 @@ app.post('/admin/add/khutbahs', requireAdmin, upload.single('file'), async (req,
   }
 });
 
-// generic add (videos)
+// add generic (videos, articles, fatwas)
 app.post('/admin/add/:type', requireAdmin, (req,res) => {
   const type = req.params.type;
   if (type === 'questions') return res.status(400).send('غير مسموح');
@@ -640,7 +657,7 @@ app.post('/admin/delete/:type/:id', requireAdmin, (req,res) => {
   res.redirect('/admin/manage/' + type);
 });
 
-// Admin questions listing and management (unchanged)
+// Admin questions
 app.get('/admin/questions', requireAdmin, (req,res) => {
   const qs = load('questions') || [];
   const rows = qs.map(q=>`<tr><td>${q.id}</td><td>${esc(q.name)}</td><td>${esc(q.email)}</td><td>${esc((q.question||'').substring(0,80))}...</td><td>${esc(q.createdAt||'')}</td><td><a class="btn btn-sm btn-primary" href="/admin/question/${q.id}">عرض</a></td></tr>`).join('');
@@ -709,7 +726,7 @@ app.get('/admin/question/:id/tofatwa', requireAdmin, (req,res) => {
   res.redirect('/admin/manage/fatwas');
 });
 
-// JSON manager (unchanged)
+// JSON manager
 function safeJsonFilename(name) {
   if (!name || typeof name !== 'string') return null;
   if (!/^[A-Za-z0-9_\-]+$/.test(name)) return null;

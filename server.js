@@ -342,7 +342,13 @@ function renderClassic(title, bodyHtml, opts = {}) {
         .then(data => {
           const s = data.suggestions || [];
           if (!s.length) { suggestionsBox.style.display='none'; suggestionsBox.innerHTML=''; return; }
-          suggestionsBox.innerHTML = s.map(it => `<div style="padding:10px 12px;border-bottom:1px solid #f0f0f0;"><a href="/\${it.type}/\${it.id}" style="text-decoration:none;color:#222;"><strong>[\${it.type}]</strong> \${it.title}</a></div>`).join('');
+          // NOTE: avoid using backtick-template inside a server template literal.
+          // Build the HTML string with concatenation so Node won't try to parse ${...}.
+          suggestionsBox.innerHTML = s.map(function(it){
+            // escape basic characters in title to reduce XSS risk on client-side rendering
+            var safeTitle = (it.title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return '<div style=\"padding:10px 12px;border-bottom:1px solid #f0f0f0;\"><a href=\"/' + encodeURIComponent(it.type) + '/' + encodeURIComponent(it.id) + '\" style=\"text-decoration:none;color:#222;\"><strong>[' + (it.type || '') + ']</strong> ' + safeTitle + '</a></div>';
+          }).join('');
           suggestionsBox.style.display = 'block';
         }).catch(()=>{ suggestionsBox.style.display='none'; });
     }, 220);
@@ -778,11 +784,6 @@ app.get('/admin/json/:name', requireAdmin, (req,res) => {
     <p class="mt-3 text-muted">سيتم التحقق من صحة JSON قبل الحفظ. نسخة احتياطية تؤخذ تلقائياً.</p>
   </div>`;
   res.send(renderClassic('تحرير JSON', body, { admin:true }));
-});
-
-app.post('/admin.json/:name/save', requireAdmin, (req,res) => {
-  // keep original API intact if route typo occurs elsewhere; this is a harmless duplicate handler placeholder
-  res.redirect('/admin/json');
 });
 
 app.post('/admin/json/:name/save', requireAdmin, (req,res) => {

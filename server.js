@@ -258,7 +258,7 @@ function renderClassic(title, bodyHtml, opts = {}) {
   .btn-brown, .btn-outline-brown { color: #5a3f1a; border-color: #c7a562; }
   .btn-brown { background: #f5efe6; border-radius:6px; }
 
-  .search-suggestions{ position:absolute; z-index:1200; width:100%; background:white; border:1px solid #eee; border-radius:6px; max-height:320px; overflow:auto; box-shadow:0 6px 18px rgba(0,0,0,.08);}
+  .search-suggestions{ position:absolute; z-index:1200; width:100%; background:white; border:1px solid #eee; border-radius:6px; max-height:320px; overflow:auto; box-shadow:0 6px 18px rgba(0,0,0,.08); }
   .search-input { min-width: 260px; max-width: 420px; } /* narrower to prevent layout shift */
 
   /* Small screens: keep nav compact */
@@ -342,7 +342,7 @@ function renderClassic(title, bodyHtml, opts = {}) {
         .then(data => {
           const s = data.suggestions || [];
           if (!s.length) { suggestionsBox.style.display='none'; suggestionsBox.innerHTML=''; return; }
-          suggestionsBox.innerHTML = s.map(it => `<div style="padding:10px 12px;border-bottom:1px solid #f0f0f0;"><a href="/${it.type}/${it.id}" style="text-decoration:none;color:#222;"><strong>[${it.type}]</strong> ${it.title}</a></div>`).join('');
+          suggestionsBox.innerHTML = s.map(it => `<div style="padding:10px 12px;border-bottom:1px solid #f0f0f0;"><a href="/\${it.type}/\${it.id}" style="text-decoration:none;color:#222;"><strong>[\${it.type}]</strong> \${it.title}</a></div>`).join('');
           suggestionsBox.style.display = 'block';
         }).catch(()=>{ suggestionsBox.style.display='none'; });
     }, 220);
@@ -778,6 +778,11 @@ app.get('/admin/json/:name', requireAdmin, (req,res) => {
     <p class="mt-3 text-muted">سيتم التحقق من صحة JSON قبل الحفظ. نسخة احتياطية تؤخذ تلقائياً.</p>
   </div>`;
   res.send(renderClassic('تحرير JSON', body, { admin:true }));
+});
+
+app.post('/admin.json/:name/save', requireAdmin, (req,res) => {
+  // keep original API intact if route typo occurs elsewhere; this is a harmless duplicate handler placeholder
+  res.redirect('/admin/json');
 });
 
 app.post('/admin/json/:name/save', requireAdmin, (req,res) => {

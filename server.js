@@ -18,6 +18,7 @@
  * - UI: updated Bootstrap CDN to stable version, minor suggestion box fix (kept minimal).
  * - Defensive checks & clearer admin messages when collections are empty.
  * - Small code cleanups and more robust error logging.
+ * - Enhanced RTL support with better styling
  *
  * Note: keep monitoring data growth when storing base64 PDFs inside the JSON files.
  *
@@ -255,7 +256,7 @@ app.get('/api/suggest', async (req,res) => {
   res.json({ suggestions });
 });
 
-// --- Renderer (kept) ---
+// --- Renderer (enhanced RTL) ---
 function renderClassic(title, bodyHtml, opts = {}) {
   const adminBlock = opts.admin ? `<a class="btn btn-sm btn-outline-dark" href="/admin">لوحة التحكم</a>` : '';
   const qVal = esc(opts.q || '');
@@ -268,24 +269,32 @@ function renderClassic(title, bodyHtml, opts = {}) {
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
 <style>
-  body{ background:#fafafa; font-family:'Cairo',sans-serif; color:#222; }
+  * { direction: rtl; }
+  body{ background:#fafafa; font-family:'Cairo',sans-serif; color:#222; direction: rtl; text-align: right; }
   .header{ background:white; border-bottom:1px solid #eee; padding:12px 0; }
-  .header .container { display:flex; align-items:center; justify-content:space-between; flex-direction:row-reverse; gap:12px; }
-  .logo-box{ display:flex; align-items:center; gap:12px; text-decoration:none; color:#000; }
+  .header .container { display:flex; align-items:center; justify-content:space-between; flex-direction:row; gap:12px; }
+  .logo-box{ display:flex; align-items:center; gap:12px; text-decoration:none; color:#000; flex-direction:row; }
   .logo-circle{ width:50px; height:50px; border-radius:50%; background:linear-gradient(180deg,#d7b46a 0%,#b48b32 100%); display:flex; justify-content:center; align-items:center; color:white; font-weight:700; font-size:20px; box-shadow:0 3px 10px rgba(0,0,0,.06); }
-  .title-main{ font-size:18px; font-weight:700; color:#111; line-height:1; }
-  .title-sub{ font-size:12px; color:#8b8b8b; margin-top:2px; }
+  .title-main{ font-size:18px; font-weight:700; color:#111; line-height:1; text-align:right; }
+  .title-sub{ font-size:12px; color:#8b8b8b; margin-top:2px; text-align:right; }
   .nav-link-custom{ padding:10px 14px; border-radius:8px; color:#666; text-decoration:none; font-weight:600; }
   .nav-link-custom:hover{ background:#f7f6f3; color:#444; }
   .card-modern{ background:white; border:1px solid #e6e6e6; border-radius:12px; padding:20px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,.03); }
-  .section-title{ font-weight:700; border-right:4px solid #c7a562; padding-right:10px; margin-bottom:18px; }
+  .classic-card{ background:white; border:1px solid #e6e6e6; border-radius:12px; padding:20px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,.03); }
+  .section-title{ font-weight:700; border-right:4px solid #c7a562; padding-right:10px; margin-bottom:18px; text-align:right; }
   footer{ text-align:center; padding:30px 0 10px; color:#777; font-size:14px; }
   .btn-gold{ background:#b48b32; color:white; border:none; padding:8px 16px; border-radius:10px; }
   .btn-gold:hover{ background:#977126; }
   .btn-brown, .btn-outline-brown { color: #5a3f1a; border-color: #c7a562; }
   .btn-brown { background: #f5efe6; border-radius:6px; }
-  .search-suggestions{ position:absolute; z-index:1200; width:100%; background:white; border:1px solid #eee; border-radius:6px; max-height:320px; overflow:auto; box-shadow:0 6px 18px rgba(0,0,0,.08);}
-  .search-input { min-width: 320px; max-width: 520px; }
+  .search-suggestions{ position:absolute; z-index:1200; width:100%; background:white; border:1px solid #eee; border-radius:6px; max-height:320px; overflow:auto; box-shadow:0 6px 18px rgba(0,0,0,.08); text-align:right;}
+  .search-input { min-width: 320px; max-width: 520px; text-align:right; direction:rtl; }
+  .ratio-vid { position:relative; width:100%; padding-bottom:56.25%; }
+  .ratio-vid iframe { position:absolute; top:0; right:0; width:100%; height:100%; }
+  .meta-muted { color:#8b8b8b; font-size:13px; }
+  .form-control { text-align:right; direction:rtl; }
+  table { direction:rtl; text-align:right; }
+  table th, table td { text-align:right; }
 </style>
 </head>
 <body>
@@ -360,7 +369,7 @@ function renderClassic(title, bodyHtml, opts = {}) {
         .then(data => {
           const s = data.suggestions || [];
           if (!s.length) { suggestionsBox.style.display='none'; suggestionsBox.innerHTML=''; return; }
-          suggestionsBox.innerHTML = s.map(it => \`<div style="padding:10px 12px;border-bottom:1px solid #f0f0f0;"><a href="/\${it.type}/\${it.id}" style="text-decoration:none;color:#222;"><strong>[\${it.type}]</strong> \${it.title}</a></div>\`).join('');
+          suggestionsBox.innerHTML = s.map(it => \`<div style="padding:10px 12px;border-bottom:1px solid #f0f0f0;text-align:right;"><a href="/\${it.type}/\${it.id}" style="text-decoration:none;color:#222;"><strong>[\${it.type}]</strong> \${it.title}</a></div>\`).join('');
           suggestionsBox.style.display = 'block';
         }).catch(()=>{ suggestionsBox.style.display='none'; });
     }, 220);
@@ -446,7 +455,7 @@ app.get('/videos/:id', (req,res) => {
     return res.send(renderClassic(item.title, body));
   }
   const iframeSrc = `https://www.youtube.com/embed/${youtubeId}`;
-  const body = `<div class="classic-card"><h3>${esc(item.title)}</h3><p class="meta-muted">${esc(item.createdAt||'')}</p><div class="ratio ratio-16x9 ratio-vid"><iframe src="${esc(iframeSrc)}" allowfullscreen style="border:0;"></iframe></div><p class="mt-2">${esc(item.description||item.content||'')}</p></div>`;
+  const body = `<div class="classic-card"><h3>${esc(item.title)}</h3><p class="meta-muted">${esc(item.createdAt||'')}</p><div class="ratio-vid"><iframe src="${esc(iframeSrc)}" allowfullscreen style="border:0;"></iframe></div><p class="mt-2">${esc(item.description||item.content||'')}</p></div>`;
   res.send(renderClassic(item.title, body));
 });
 
@@ -608,7 +617,7 @@ app.get('/admin/manage/:type', requireAdmin, (req,res) => {
   if (type === 'videos') addFields = `<div class="mb-2"><label>رابط يوتيوب أو ID</label><input name="url" class="form-control" placeholder="https://www.youtube.com/watch?v=... أو ID"></div>`;
   if (type === 'khutbahs') addFields = `<div class="mb-2"><label>رفع ملف PDF</label><input type="file" name="file" accept="application/pdf" class="form-control"></div>`;
   const rows = items.length ? items.map(i=>`<tr><td>${i.id}</td><td>${esc(i.title||i.name||'')}</td><td>${esc(i.createdAt||'')}</td><td>
-    <form method="post" action="/admin/delete/${type}/${i.id}" onsubmit="return confirm('حذف؟')"><button class="btn btn-sm btn-danger">حذف</button></form>
+    <form method="post" action="/admin/delete/${type}/${i.id}" onsubmit="return confirm('حذف؟')" style="display:inline;"><button class="btn btn-sm btn-danger">حذف</button></form>
   </td></tr>`).join('') : `<tr><td colspan="4">لا توجد عناصر حتى الآن.</td></tr>`;
   const addForm = (type !== 'questions') ? `<h5 class="mt-3">إضافة جديد</h5>
     <form method="post" action="/admin/add/${type}" ${type==='khutbahs'?'enctype="multipart/form-data"':''}>
@@ -617,10 +626,10 @@ app.get('/admin/manage/:type', requireAdmin, (req,res) => {
       ${addFields}
       <button class="btn btn-success">إضافة</button>
     </form>` : '';
-  const body = `<h3>إدارة ${esc(type)}</h3>
+  const body = `<div class="classic-card"><h3>إدارة ${esc(type)}</h3>
     <table class="table"><thead><tr><th>ID</th><th>العنوان</th><th>تاريخ</th><th>إجراء</th></tr></thead><tbody>${rows}</tbody></table>
     ${addForm}
-    <p><a href="/admin" class="btn btn-outline-brown">رجوع</a></p>`;
+    <p><a href="/admin" class="btn btn-outline-brown">رجوع</a></p></div>`;
   res.send(renderClassic('ادارة '+type, body, { admin:true }));
 });
 
@@ -684,7 +693,7 @@ app.post('/admin/delete/:type/:id', requireAdmin, (req,res) => {
   res.redirect('/admin/manage/' + type);
 });
 
-// Admin questions listing and management (unchanged)
+// Admin questions listing and management
 app.get('/admin/questions', requireAdmin, (req,res) => {
   const qs = load('questions') || [];
   const rows = qs.map(q=>`<tr><td>${q.id}</td><td>${esc(q.name)}</td><td>${esc(q.email)}</td><td>${esc((q.question||'').substring(0,80))}...</td><td>${esc(q.createdAt||'')}</td><td><a class="btn btn-sm btn-primary" href="/admin/question/${q.id}">عرض</a></td></tr>`).join('') || `<tr><td colspan="6">لا توجد أسئلة</td></tr>`;
@@ -753,7 +762,7 @@ app.get('/admin/question/:id/tofatwa', requireAdmin, (req,res) => {
   res.redirect('/admin/manage/fatwas');
 });
 
-// JSON manager (unchanged)
+// JSON manager
 function safeJsonFilename(name) {
   if (!name || typeof name !== 'string') return null;
   if (!/^[A-Za-z0-9_\-]+$/.test(name)) return null;

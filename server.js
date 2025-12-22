@@ -1,64 +1,3 @@
-Robot
-Hey addashatem55, Quick input needed :
-
-تفضل! هذا هو الكود الكامل المدموج في ملف واحد (928 سطر).
-📋 ملخص سريع:
-🎨 التعديلات الرئيسية في CSS (من السطر 272-350):
-
-/* الدائرة الذهبية - مكبرة */
-.logo-circle { 
-  width: 80px;      /* كانت 50px */
-  height: 80px;
-  font-size: 36px;  /* كانت 20px */
-}
-
-/* اسم فهد بن عبدالله الجربوع - مكبر */
-.title-main { 
-  font-size: 28px;  /* كانت 18px */
-}
-
-/* النص الفرعي - مكبر */
-.title-sub { 
-  font-size: 16px;  /* كانت 12px */
-}
-
-/* روابط القائمة - مكبرة */
-.nav-link-custom { 
-  font-size: 17px;
-  padding: 14px 18px;  /* كانت 10px 14px */
-}
-
-🚀 للتشغيل:
-
-    احفظ الكود في ملف اسمه server.js
-    ثبت الحزم المطلوبة:
-
-npm install express express-session fs-extra multer body-parser helmet express-rate-limit sanitize-html
-
-    شغل التطبيق:
-
-node server.js
-
-    افتح المتصفح:
-
-http://localhost:3001
-
-🔐 بيانات الدخول للإدارة:
-
-    Username: admin
-    Password: 1234
-
-الكود جاهز للاستخدام مباشرة! 🎉
-Dec 22, 09:51 PM
-
-ما عطيطني الكود كامل
-Dec 22, 09:55 PM
-Robot
-Hey addashatem55, Quick input needed :
-Ask QuestionAgent will continue working after your reply
-
-حاضر! سأعطيك الكود الكامل هنا:
-
 /**
  * server.js
  *
@@ -70,12 +9,16 @@ Ask QuestionAgent will continue working after your reply
  * - Viewing a khutbah streams the PDF from the stored base64.
  *
  * Improvements / fixes applied:
-
-minimal).
+ * - Consistent route names for khutbahs (added /khutbahs list and kept /khutab as alias).
+ * - Restricted admin-managed types to allowed set (prevent arbitrary file creation via admin manage).
+ * - Better sanitize-html usage (if installed) with safe allowed tags/attrs; fallback remains simple escape.
+ * - Session cookie secure in production and SameSite set to 'lax'.
+ * - Added 404 and error handlers.
+ * - Safer Content-Disposition filename handling and Content-Length for PDF streaming.
+ * - UI: updated Bootstrap CDN to stable version, minor suggestion box fix (kept minimal).
  * - Defensive checks & clearer admin messages when collections are empty.
  * - Small code cleanups and more robust error logging.
  * - Enhanced RTL support with better styling
- * - ENHANCED SIZES: Larger logo, name, subtitle, and navigation menu items
  *
  * Note: keep monitoring data growth when storing base64 PDFs inside the JSON files.
  *
@@ -148,7 +91,7 @@ if (rateLimitPkg) {
 }
 
 // CONFIG
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 const USE_PERSISTENT_DISK = (process.env.USE_PERSISTENT_DISK || 'false').toLowerCase() === 'true';
 const PERSISTENT_DATA_PATH = process.env.PERSISTENT_DATA_PATH || '';
 const BASE_DATA_DIR = USE_PERSISTENT_DISK && PERSISTENT_DATA_PATH ? path.join(PERSISTENT_DATA_PATH, 'data') : path.join(__dirname, 'data');
@@ -313,7 +256,7 @@ app.get('/api/suggest', async (req,res) => {
   res.json({ suggestions });
 });
 
-// --- Renderer (enhanced RTL with LARGER SIZES) ---
+// --- Renderer (enhanced RTL) ---
 function renderClassic(title, bodyHtml, opts = {}) {
   const adminBlock = opts.admin ? `<a class="btn btn-sm btn-outline-dark" href="/admin">لوحة التحكم</a>` : '';
   const qVal = esc(opts.q || '');
@@ -328,58 +271,14 @@ function renderClassic(title, bodyHtml, opts = {}) {
 <style>
   * { direction: rtl; }
   body{ background:#fafafa; font-family:'Cairo',sans-serif; color:#222; direction: rtl; text-align: right; }
-  .header{ background:white; border-bottom:1px solid #eee; padding:16px 0; }
-  .header .container { display:flex; align-items:center; justify-content:space-between; flex-direction:row; gap:18px; }
-  .logo-box{ display:flex; align-items:center; gap:16px; text-decoration:none; color:#000; flex-direction:row; }
-  
-  /* تكبير الدائرة الذهبية */
-  .logo-circle{ 
-    width:80px; 
-    height:80px; 
-    border-radius:50%; 
-    background:linear-gradient(180deg,#d7b46a 0%,#b48b32 100%); 
-    display:flex; 
-    justify-content:center; 
-    align-items:center; 
-    color:white; 
-    font-weight:700; 
-    font-size:36px; 
-    box-shadow:0 4px 14px rgba(0,0,0,.1); 
-  }
-  
-  /* تكبير اسم فهد بن عبدالله الجربوع */
-  .title-main{ 
-    font-size:28px; 
-    font-weight:700; 
-    color:#111; 
-    line-height:1.2; 
-    text-align:right; 
-  }
-  
-  /* تكبير النص الفرعي */
-  .title-sub{ 
-    font-size:16px; 
-    color:#8b8b8b; 
-    margin-top:4px; 
-    text-align:right; 
-  }
-  
-  /* تكبير روابط القائمة */
-  .nav-link-custom{ 
-    padding:14px 18px; 
-    border-radius:10px; 
-    color:#666; 
-    text-decoration:none; 
-    font-weight:600; 
-    font-size:17px;
-    transition: all 0.3s ease;
-  }
-  .nav-link-custom:hover{ 
-    background:#f7f6f3; 
-    color:#444; 
-    transform: translateY(-2px);
-  }
-  
+  .header{ background:white; border-bottom:1px solid #eee; padding:12px 0; }
+  .header .container { display:flex; align-items:center; justify-content:space-between; flex-direction:row; gap:12px; }
+  .logo-box{ display:flex; align-items:center; gap:12px; text-decoration:none; color:#000; flex-direction:row; }
+  .logo-circle{ width:50px; height:50px; border-radius:50%; background:linear-gradient(180deg,#d7b46a 0%,#b48b32 100%); display:flex; justify-content:center; align-items:center; color:white; font-weight:700; font-size:20px; box-shadow:0 3px 10px rgba(0,0,0,.06); }
+  .title-main{ font-size:18px; font-weight:700; color:#111; line-height:1; text-align:right; }
+  .title-sub{ font-size:12px; color:#8b8b8b; margin-top:2px; text-align:right; }
+  .nav-link-custom{ padding:10px 14px; border-radius:8px; color:#666; text-decoration:none; font-weight:600; }
+  .nav-link-custom:hover{ background:#f7f6f3; color:#444; }
   .card-modern{ background:white; border:1px solid #e6e6e6; border-radius:12px; padding:20px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,.03); }
   .classic-card{ background:white; border:1px solid #e6e6e6; border-radius:12px; padding:20px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,.03); }
   .section-title{ font-weight:700; border-right:4px solid #c7a562; padding-right:10px; margin-bottom:18px; text-align:right; }
@@ -389,21 +288,13 @@ function renderClassic(title, bodyHtml, opts = {}) {
   .btn-brown, .btn-outline-brown { color: #5a3f1a; border-color: #c7a562; }
   .btn-brown { background: #f5efe6; border-radius:6px; }
   .search-suggestions{ position:absolute; z-index:1200; width:100%; background:white; border:1px solid #eee; border-radius:6px; max-height:320px; overflow:auto; box-shadow:0 6px 18px rgba(0,0,0,.08); text-align:right;}
-  .search-input { min-width: 320px; max-width: 520px; text-align:right; direction:rtl; font-size:15px; padding:10px 14px; }
+  .search-input { min-width: 320px; max-width: 520px; text-align:right; direction:rtl; }
   .ratio-vid { position:relative; width:100%; padding-bottom:56.25%; }
   .ratio-vid iframe { position:absolute; top:0; right:0; width:100%; height:100%; }
   .meta-muted { color:#8b8b8b; font-size:13px; }
   .form-control { text-align:right; direction:rtl; }
   table { direction:rtl; text-align:right; }
   table th, table td { text-align:right; }
-  
-  /* Responsive adjustments */
-  @media (max-width: 768px) {
-    .logo-circle { width:65px; height:65px; font-size:28px; }
-    .title-main { font-size:22px; }
-    .title-sub { font-size:13px; }
-    .nav-link-custom { font-size:15px; padding:12px 14px; }
-  }
 </style>
 </head>
 <body>
@@ -981,3 +872,4 @@ app.listen(PORT, () => {
   console.log(`Admin credentials: ${ADMIN_USER} / ${ADMIN_PASS}`);
   console.log(`Data dir: ${DATA_DIR} (persistent disk: ${USE_PERSISTENT_DISK})`);
 });
+22, 09:09 PM

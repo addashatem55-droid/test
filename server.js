@@ -1,5 +1,65 @@
+Robot
+Hey addashatem55, Quick input needed :
 
-Action: file_editor create /app/server.js --file-text "/**
+تفضل! هذا هو الكود الكامل المدموج في ملف واحد (928 سطر).
+📋 ملخص سريع:
+🎨 التعديلات الرئيسية في CSS (من السطر 272-350):
+
+/* الدائرة الذهبية - مكبرة */
+.logo-circle { 
+  width: 80px;      /* كانت 50px */
+  height: 80px;
+  font-size: 36px;  /* كانت 20px */
+}
+
+/* اسم فهد بن عبدالله الجربوع - مكبر */
+.title-main { 
+  font-size: 28px;  /* كانت 18px */
+}
+
+/* النص الفرعي - مكبر */
+.title-sub { 
+  font-size: 16px;  /* كانت 12px */
+}
+
+/* روابط القائمة - مكبرة */
+.nav-link-custom { 
+  font-size: 17px;
+  padding: 14px 18px;  /* كانت 10px 14px */
+}
+
+🚀 للتشغيل:
+
+    احفظ الكود في ملف اسمه server.js
+    ثبت الحزم المطلوبة:
+
+npm install express express-session fs-extra multer body-parser helmet express-rate-limit sanitize-html
+
+    شغل التطبيق:
+
+node server.js
+
+    افتح المتصفح:
+
+http://localhost:3001
+
+🔐 بيانات الدخول للإدارة:
+
+    Username: admin
+    Password: 1234
+
+الكود جاهز للاستخدام مباشرة! 🎉
+Dec 22, 09:51 PM
+
+ما عطيطني الكود كامل
+Dec 22, 09:55 PM
+Robot
+Hey addashatem55, Quick input needed :
+Ask QuestionAgent will continue working after your reply
+
+حاضر! سأعطيك الكود الكامل هنا:
+
+/**
  * server.js
  *
  * - Supabase removed entirely.
@@ -10,13 +70,8 @@ Action: file_editor create /app/server.js --file-text "/**
  * - Viewing a khutbah streams the PDF from the stored base64.
  *
  * Improvements / fixes applied:
- * - Consistent route names for khutbahs (added /khutbahs list and kept /khutab as alias).
- * - Restricted admin-managed types to allowed set (prevent arbitrary file creation via admin manage).
- * - Better sanitize-html usage (if installed) with safe allowed tags/attrs; fallback remains simple escape.
- * - Session cookie secure in production and SameSite set to 'lax'.
- * - Added 404 and error handlers.
- * - Safer Content-Disposition filename handling and Content-Length for PDF streaming.
- * - UI: updated Bootstrap CDN to stable version, minor suggestion box fix (kept minimal).
+
+minimal).
  * - Defensive checks & clearer admin messages when collections are empty.
  * - Small code cleanups and more robust error logging.
  * - Enhanced RTL support with better styling
@@ -93,7 +148,7 @@ if (rateLimitPkg) {
 }
 
 // CONFIG
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 const USE_PERSISTENT_DISK = (process.env.USE_PERSISTENT_DISK || 'false').toLowerCase() === 'true';
 const PERSISTENT_DATA_PATH = process.env.PERSISTENT_DATA_PATH || '';
 const BASE_DATA_DIR = USE_PERSISTENT_DISK && PERSISTENT_DATA_PATH ? path.join(PERSISTENT_DATA_PATH, 'data') : path.join(__dirname, 'data');
@@ -126,7 +181,7 @@ app.use('/static', express.static(path.join(__dirname, 'public')));
 // Helpers (kept names as original)
 function esc(s) {
   if (s === undefined || s === null) return '';
-  return String(s).replace(/[&<>\"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' })[c]);
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 }
 function safeFilename(name) {
   return String(name || '').replace(/[^a-zA-Z0-9.\-\u0600-\u06FF _]/g, '_');
@@ -260,16 +315,16 @@ app.get('/api/suggest', async (req,res) => {
 
 // --- Renderer (enhanced RTL with LARGER SIZES) ---
 function renderClassic(title, bodyHtml, opts = {}) {
-  const adminBlock = opts.admin ? `<a class=\"btn btn-sm btn-outline-dark\" href=\"/admin\">لوحة التحكم</a>` : '';
+  const adminBlock = opts.admin ? `<a class="btn btn-sm btn-outline-dark" href="/admin">لوحة التحكم</a>` : '';
   const qVal = esc(opts.q || '');
   return `<!doctype html>
-<html lang=\"ar\" dir=\"rtl\">
+<html lang="ar" dir="rtl">
 <head>
-<meta charset=\"utf-8\">
+<meta charset="utf-8">
 <title>${esc(title)} - فهد بن عبدالله الجربوع</title>
-<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">
-<link href=\"https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap\" rel=\"stylesheet\">
-<link href=\"https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css\" rel=\"stylesheet\">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
 <style>
   * { direction: rtl; }
   body{ background:#fafafa; font-family:'Cairo',sans-serif; color:#222; direction: rtl; text-align: right; }
@@ -352,30 +407,30 @@ function renderClassic(title, bodyHtml, opts = {}) {
 </style>
 </head>
 <body>
-<header class=\"header mb-3\">
-  <div class=\"container\">
-    <a href=\"/\" class=\"logo-box\" aria-label=\"الصفحة الرئيسية\">
-      <div class=\"logo-circle\">ف</div>
+<header class="header mb-3">
+  <div class="container">
+    <a href="/" class="logo-box" aria-label="الصفحة الرئيسية">
+      <div class="logo-circle">ف</div>
       <div>
-        <div class=\"title-main\">فهد بن عبدالله الجربوع</div>
-        <div class=\"title-sub\">منصة علمية للفتاوى والمقالات والخطب</div>
+        <div class="title-main">فهد بن عبدالله الجربوع</div>
+        <div class="title-sub">منصة علمية للفتاوى والمقالات والخطب</div>
       </div>
     </a>
 
-    <div style=\"display:flex; align-items:center; gap:10px; width:100%; justify-content:flex-start;\">
-      <div style=\"position:relative; width:100%; max-width:520px;\">
-        <form id=\"searchForm\" action=\"/search\" method=\"GET\">
-          <input id=\"searchInput\" name=\"q\" class=\"form-control search-input\" type=\"search\" placeholder=\"ابحث هنا عن الفتاوى، المقالات، الفيديوهات أو الخطب...\" autocomplete=\"off\" value=\"${qVal}\" />
+    <div style="display:flex; align-items:center; gap:10px; width:100%; justify-content:flex-start;">
+      <div style="position:relative; width:100%; max-width:520px;">
+        <form id="searchForm" action="/search" method="GET">
+          <input id="searchInput" name="q" class="form-control search-input" type="search" placeholder="ابحث هنا عن الفتاوى، المقالات، الفيديوهات أو الخطب..." autocomplete="off" value="${qVal}" />
         </form>
-        <div id=\"suggestions\" class=\"search-suggestions\" style=\"display:none;\"></div>
+        <div id="suggestions" class="search-suggestions" style="display:none;"></div>
       </div>
 
-      <nav class=\"d-none d-md-flex gap-2\">
-        <a href=\"/fatwas\" class=\"nav-link-custom\">الفتاوى</a>
-        <a href=\"/articles\" class=\"nav-link-custom\">المقالات</a>
-        <a href=\"/videos\" class=\"nav-link-custom\">الفيديوهات</a>
-        <a href=\"/khutbahs\" class=\"nav-link-custom\">الخطب</a>
-        <a href=\"/ask-page\" class=\"nav-link-custom\">أرسل سؤالك</a>
+      <nav class="d-none d-md-flex gap-2">
+        <a href="/fatwas" class="nav-link-custom">الفتاوى</a>
+        <a href="/articles" class="nav-link-custom">المقالات</a>
+        <a href="/videos" class="nav-link-custom">الفيديوهات</a>
+        <a href="/khutbahs" class="nav-link-custom">الخطب</a>
+        <a href="/ask-page" class="nav-link-custom">أرسل سؤالك</a>
       </nav>
 
       ${adminBlock}
@@ -383,24 +438,24 @@ function renderClassic(title, bodyHtml, opts = {}) {
   </div>
 </header>
 
-<div class=\"container\">
-  <div class=\"row\">
-    <div class=\"col-lg-8\">
+<div class="container">
+  <div class="row">
+    <div class="col-lg-8">
       ${bodyHtml}
     </div>
-    <div class=\"col-lg-4\">
-      <div class=\"card-modern\">
-        <h5 class=\"section-title\">روابط سريعة</h5>
-        <ul class=\"list-unstyled\">
-          <li class=\"mb-2\"><a href=\"/fatwas\">الفتاوى</a></li>
-          <li class=\"mb-2\"><a href=\"/articles\">المقالات</a></li>
-          <li class=\"mb-2\"><a href=\"/videos\">الفيديوهات</a></li>
-          <li class=\"mb-2\"><a href=\"/khutbahs\">الخطب المفرغة (PDF)</a></li>
-          <li class=\"mb-2\"><a href=\"/ask-page\">أرسل سؤالك</a></li>
+    <div class="col-lg-4">
+      <div class="card-modern">
+        <h5 class="section-title">روابط سريعة</h5>
+        <ul class="list-unstyled">
+          <li class="mb-2"><a href="/fatwas">الفتاوى</a></li>
+          <li class="mb-2"><a href="/articles">المقالات</a></li>
+          <li class="mb-2"><a href="/videos">الفيديوهات</a></li>
+          <li class="mb-2"><a href="/khutbahs">الخطب المفرغة (PDF)</a></li>
+          <li class="mb-2"><a href="/ask-page">أرسل سؤالك</a></li>
         </ul>
       </div>
-      <div class=\"card-modern\">
-        <h5 class=\"section-title\">عن المنصة</h5>
+      <div class="card-modern">
+        <h5 class="section-title">عن المنصة</h5>
         <p>منصة علمية موثوقة هدفها نشر الفتاوى والمقالات والخطب بالصوت والكتابة.</p>
       </div>
     </div>
@@ -423,7 +478,7 @@ function renderClassic(title, bodyHtml, opts = {}) {
         .then(data => {
           const s = data.suggestions || [];
           if (!s.length) { suggestionsBox.style.display='none'; suggestionsBox.innerHTML=''; return; }
-          suggestionsBox.innerHTML = s.map(it => \`<div style=\"padding:10px 12px;border-bottom:1px solid #f0f0f0;text-align:right;\"><a href=\"/\${it.type}/\${it.id}\" style=\"text-decoration:none;color:#222;\"><strong>[\${it.type}]</strong> \${it.title}</a></div>\`).join('');
+          suggestionsBox.innerHTML = s.map(it => \`<div style="padding:10px 12px;border-bottom:1px solid #f0f0f0;text-align:right;"><a href="/\${it.type}/\${it.id}" style="text-decoration:none;color:#222;"><strong>[\${it.type}]</strong> \${it.title}</a></div>\`).join('');
           suggestionsBox.style.display = 'block';
         }).catch(()=>{ suggestionsBox.style.display='none'; });
     }, 220);
@@ -449,21 +504,21 @@ app.get('/', (req,res) => {
   const videos = load('videos').slice().reverse().slice(0,5);
   const khutbahs = load('khutbahs').slice().reverse().slice(0,5);
   const body = `
-    <div class=\"classic-card\">
-      <h4 class=\"section-title\">أحدث الفتاوى</h4>
-      <ul class=\"list-unstyled\">${fatwas.map(f=>`<li class=\"mb-1\"><a href=\"/fatwas/${f.id}\">${esc(f.title)}</a></li>`).join('')}</ul>
+    <div class="classic-card">
+      <h4 class="section-title">أحدث الفتاوى</h4>
+      <ul class="list-unstyled">${fatwas.map(f=>`<li class="mb-1"><a href="/fatwas/${f.id}">${esc(f.title)}</a></li>`).join('')}</ul>
     </div>
-    <div class=\"classic-card\">
-      <h4 class=\"section-title\">أحدث المقالات</h4>
-      <ul class=\"list-unstyled\">${articles.map(a=>`<li class=\"mb-1\"><a href=\"/articles/${a.id}\">${esc(a.title)}</a></li>`).join('')}</ul>
+    <div class="classic-card">
+      <h4 class="section-title">أحدث المقالات</h4>
+      <ul class="list-unstyled">${articles.map(a=>`<li class="mb-1"><a href="/articles/${a.id}">${esc(a.title)}</a></li>`).join('')}</ul>
     </div>
-    <div class=\"classic-card\">
-      <h4 class=\"section-title\">أحدث الفيديوهات</h4>
-      <ul class=\"list-unstyled\">${videos.map(v=>`<li class=\"mb-1\"><a href=\"/videos/${v.id}\">${esc(v.title)}</a></li>`).join('')}</ul>
+    <div class="classic-card">
+      <h4 class="section-title">أحدث الفيديوهات</h4>
+      <ul class="list-unstyled">${videos.map(v=>`<li class="mb-1"><a href="/videos/${v.id}">${esc(v.title)}</a></li>`).join('')}</ul>
     </div>
-    <div class=\"classic-card\">
-      <h4 class=\"section-title\">الخطب المفرغة (PDF)</h4>
-      <ul class=\"list-unstyled\">${khutbahs.map(k=>`<li class=\"mb-1\"><a href=\"/khutbahs/${k.id}\">${esc(k.title)}</a></li>`).join('')}</ul>
+    <div class="classic-card">
+      <h4 class="section-title">الخطب المفرغة (PDF)</h4>
+      <ul class="list-unstyled">${khutbahs.map(k=>`<li class="mb-1"><a href="/khutbahs/${k.id}">${esc(k.title)}</a></li>`).join('')}</ul>
     </div>
   `;
   res.send(renderClassic('الرئيسية', body));
@@ -472,51 +527,51 @@ app.get('/', (req,res) => {
 // Fatwas
 app.get('/fatwas', (req,res) => {
   const items = load('fatwas');
-  const body = `<div class=\"classic-card\"><h3 class=\"section-title\">الفتاوى</h3>${items.length ? items.map(i=>`<article class=\"mb-3\"><h5><a href=\"/fatwas/${i.id}\">${esc(i.title)}</a></h5><p class=\"meta-muted\">${esc(i.createdAt||'')}</p></article>`).join('') : '<p>لا توجد فتاوى حتى الآن.</p>'}</div>`;
+  const body = `<div class="classic-card"><h3 class="section-title">الفتاوى</h3>${items.length ? items.map(i=>`<article class="mb-3"><h5><a href="/fatwas/${i.id}">${esc(i.title)}</a></h5><p class="meta-muted">${esc(i.createdAt||'')}</p></article>`).join('') : '<p>لا توجد فتاوى حتى الآن.</p>'}</div>`;
   res.send(renderClassic('الفتاوى', body));
 });
 app.get('/fatwas/:id', (req,res) => {
   const item = load('fatwas').find(x=>String(x.id)===String(req.params.id));
-  if (!item) return res.send(renderClassic('غير موجود','<div class=\"classic-card\">الفتوى غير موجودة</div>'));
-  res.send(renderClassic(item.title, `<div class=\"classic-card\"><h3>${esc(item.title)}</h3><p class=\"meta-muted\">${esc(item.createdAt||'')}</p><div>${sanitizeHtmlSafe(item.content||'')}</div></div>`));
+  if (!item) return res.send(renderClassic('غير موجود','<div class="classic-card">الفتوى غير موجودة</div>'));
+  res.send(renderClassic(item.title, `<div class="classic-card"><h3>${esc(item.title)}</h3><p class="meta-muted">${esc(item.createdAt||'')}</p><div>${sanitizeHtmlSafe(item.content||'')}</div></div>`));
 });
 
 // Articles
 app.get('/articles', (req,res) => {
   const items = load('articles');
-  const body = `<div class=\"classic-card\"><h3 class=\"section-title\">المقالات</h3>${items.length ? items.map(i=>`<article class=\"mb-3\"><h5><a href=\"/articles/${i.id}\">${esc(i.title)}</a></h5><p class=\"meta-muted\">${esc(i.createdAt||'')}</p></article>`).join('') : '<p>لا توجد مقالات حتى الآن.</p>'}</div>`;
+  const body = `<div class="classic-card"><h3 class="section-title">المقالات</h3>${items.length ? items.map(i=>`<article class="mb-3"><h5><a href="/articles/${i.id}">${esc(i.title)}</a></h5><p class="meta-muted">${esc(i.createdAt||'')}</p></article>`).join('') : '<p>لا توجد مقالات حتى الآن.</p>'}</div>`;
   res.send(renderClassic('المقالات', body));
 });
 app.get('/articles/:id', (req,res) => {
   const item = load('articles').find(x=>String(x.id)===String(req.params.id));
-  if (!item) return res.send(renderClassic('غير موجود','<div class=\"classic-card\">المقال غير موجود</div>'));
-  res.send(renderClassic(item.title, `<div class=\"classic-card\"><h3>${esc(item.title)}</h3><p class=\"meta-muted\">${esc(item.createdAt||'')}</p><div>${sanitizeHtmlSafe(item.content||'')}</div></div>`));
+  if (!item) return res.send(renderClassic('غير موجود','<div class="classic-card">المقال غير موجود</div>'));
+  res.send(renderClassic(item.title, `<div class="classic-card"><h3>${esc(item.title)}</h3><p class="meta-muted">${esc(item.createdAt||'')}</p><div>${sanitizeHtmlSafe(item.content||'')}</div></div>`));
 });
 
 // Videos
 app.get('/videos', (req,res) => {
   const items = load('videos');
-  const body = `<div class=\"classic-card\"><h3 class=\"section-title\">الفيديوهات</h3>${items.length ? items.map(i=>`<div class=\"mb-3\"><h5>${esc(i.title)}</h5><p class=\"meta-muted\">${esc(i.createdAt||'')}</p><p><a href=\"/videos/${i.id}\" class=\"btn btn-outline-brown btn-sm\">مشاهدة</a></p></div>`).join('') : '<p>لا توجد فيديوهات حتى الآن.</p>'}</div>`;
+  const body = `<div class="classic-card"><h3 class="section-title">الفيديوهات</h3>${items.length ? items.map(i=>`<div class="mb-3"><h5>${esc(i.title)}</h5><p class="meta-muted">${esc(i.createdAt||'')}</p><p><a href="/videos/${i.id}" class="btn btn-outline-brown btn-sm">مشاهدة</a></p></div>`).join('') : '<p>لا توجد فيديوهات حتى الآن.</p>'}</div>`;
   res.send(renderClassic('الفيديوهات', body));
 });
 app.get('/videos/:id', (req,res) => {
   const item = load('videos').find(x=>String(x.id)===String(req.params.id));
-  if (!item) return res.send(renderClassic('غير موجود','<div class=\"classic-card\">الفيديو غير موجود</div>'));
+  if (!item) return res.send(renderClassic('غير موجود','<div class="classic-card">الفيديو غير موجود</div>'));
   let youtubeId = item.youtubeId || extractYouTubeID(item.url || '');
   if (!youtubeId && item.url) youtubeId = extractYouTubeID(item.url || '');
   if (!youtubeId) {
-    const body = `<div class=\"classic-card\"><h3>${esc(item.title)}</h3><p>الرابط: <a href=\"${esc(item.url)}\">${esc(item.url)}</a></p><p class=\"meta-muted\">${esc(item.description||'')}</p></div>`;
+    const body = `<div class="classic-card"><h3>${esc(item.title)}</h3><p>الرابط: <a href="${esc(item.url)}">${esc(item.url)}</a></p><p class="meta-muted">${esc(item.description||'')}</p></div>`;
     return res.send(renderClassic(item.title, body));
   }
   const iframeSrc = `https://www.youtube.com/embed/${youtubeId}`;
-  const body = `<div class=\"classic-card\"><h3>${esc(item.title)}</h3><p class=\"meta-muted\">${esc(item.createdAt||'')}</p><div class=\"ratio-vid\"><iframe src=\"${esc(iframeSrc)}\" allowfullscreen style=\"border:0;\"></iframe></div><p class=\"mt-2\">${esc(item.description||item.content||'')}</p></div>`;
+  const body = `<div class="classic-card"><h3>${esc(item.title)}</h3><p class="meta-muted">${esc(item.createdAt||'')}</p><div class="ratio-vid"><iframe src="${esc(iframeSrc)}" allowfullscreen style="border:0;"></iframe></div><p class="mt-2">${esc(item.description||item.content||'')}</p></div>`;
   res.send(renderClassic(item.title, body));
 });
 
 // Khutbahs list (canonical) and alias
 app.get('/khutbahs', (req,res) => {
   const items = load('khutbahs');
-  const body = `<div class=\"classic-card\"><h3 class=\"section-title\">الخطب المفرغة (PDF)</h3>${items.length ? items.map(i=>`<div class=\"mb-3\"><h5>${esc(i.title)}</h5><p><a href=\"/khutbahs/${i.id}\" class=\"btn btn-outline-brown btn-sm\">عرض / تحميل PDF</a></p></div>`).join('') : '<p>لا توجد خطب حتى الآن.</p>'}</div>`;
+  const body = `<div class="classic-card"><h3 class="section-title">الخطب المفرغة (PDF)</h3>${items.length ? items.map(i=>`<div class="mb-3"><h5>${esc(i.title)}</h5><p><a href="/khutbahs/${i.id}" class="btn btn-outline-brown btn-sm">عرض / تحميل PDF</a></p></div>`).join('') : '<p>لا توجد خطب حتى الآن.</p>'}</div>`;
   res.send(renderClassic('الخطب المفرغة', body));
 });
 // legacy alias kept
@@ -525,16 +580,16 @@ app.get('/khutab', (req, res) => res.redirect(301, '/khutbahs'));
 // View khutbah detail and embed PDF if stored as base64
 app.get('/khutbahs/:id', async (req,res) => {
   const item = load('khutbahs').find(x=>String(x.id)===String(req.params.id));
-  if (!item) return res.send(renderClassic('غير موجود','<div class=\"classic-card\">الخطبة غير موجود</div>'));
+  if (!item) return res.send(renderClassic('غير موجود','<div class="classic-card">الخطبة غير موجود</div>'));
   let content = `<div>${sanitizeHtmlSafe(item.content||'')}</div>`;
   if (item.fileData) {
     // Serve via embed referencing /khutbahs/:id/pdf
-    content = `<embed src=\"/khutbahs/${item.id}/pdf\" type=\"application/pdf\" width=\"100%\" height=\"600px\"/>`;
+    content = `<embed src="/khutbahs/${item.id}/pdf" type="application/pdf" width="100%" height="600px"/>`;
   } else if (item.file) {
     // backward compatibility if old records had file path (but we removed local disk uploads)
     content = `<div>ملف موجود: ${esc(item.file)}</div>`;
   }
-  res.send(renderClassic(item.title, `<div class=\"classic-card\"><h3>${esc(item.title)}</h3><p class=\"meta-muted\">${esc(item.createdAt||'')}</p>${content}</div>`));
+  res.send(renderClassic(item.title, `<div class="classic-card"><h3>${esc(item.title)}</h3><p class="meta-muted">${esc(item.createdAt||'')}</p>${content}</div>`));
 });
 
 // Stream PDF from stored base64
@@ -546,7 +601,7 @@ app.get('/khutbahs/:id/pdf', (req,res) => {
     const buf = Buffer.from(item.fileData, 'base64');
     res.setHeader('Content-Type', item.fileMime || 'application/pdf');
     const safeName = safeFilename(item.fileName || `khutbah-${item.id}.pdf`);
-    res.setHeader('Content-Disposition', `inline; filename=\"${encodeURIComponent(path.basename(safeName))}\"`);
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(path.basename(safeName))}"`);
     res.setHeader('Content-Length', String(buf.length));
     return res.send(buf);
   } catch (e) {
@@ -571,24 +626,24 @@ app.get('/search', async (req,res) => {
       });
     }
     results = results.sort((a,b) => b.score - a.score).slice(0,200);
-    const body = `<div class=\"classic-card\"><h3 class=\"section-title\">نتائج البحث (${results.length})</h3>
-      <ul class=\"list-unstyled\">${results.map(r=>`<li class=\"mb-2\"><a href=\"/${r.type}/${r.item.id}\">[${esc(r.type)}] ${esc(r.item.title)}</a> <small class=\"text-muted\">score:${(r.score||0).toFixed(1)}</small></li>`).join('')}</ul>
+    const body = `<div class="classic-card"><h3 class="section-title">نتائج البحث (${results.length})</h3>
+      <ul class="list-unstyled">${results.map(r=>`<li class="mb-2"><a href="/${r.type}/${r.item.id}">[${esc(r.type)}] ${esc(r.item.title)}</a> <small class="text-muted">score:${(r.score||0).toFixed(1)}</small></li>`).join('')}</ul>
     </div>`;
     res.send(renderClassic('بحث', body, { q }));
   } catch (e) {
     console.error('search page error', e && e.message ? e.message : e);
-    res.send(renderClassic('خطأ', '<div class=\"classic-card text-danger\">حدث خطأ أثناء البحث</div>'));
+    res.send(renderClassic('خطأ', '<div class="classic-card text-danger">حدث خطأ أثناء البحث</div>'));
   }
 });
 
 // Ask (questions)
 app.get('/ask-page', (req,res) => {
-  const form = `<div class=\"classic-card\"><h3 class=\"section-title\">أرسل سؤالك</h3>
-    <form action=\"/ask\" method=\"POST\">
-      <div class=\"mb-2\"><label>الاسم</label><input name=\"name\" class=\"form-control\" required></div>
-      <div class=\"mb-2\"><label>البريد الإلكتروني</label><input name=\"email\" type=\"email\" class=\"form-control\" required></div>
-      <div class=\"mb-2\"><label>السؤال</label><textarea name=\"question\" class=\"form-control\" rows=\"6\" required></textarea></div>
-      <button class=\"btn btn-brown\">أرسل سؤالك</button>
+  const form = `<div class="classic-card"><h3 class="section-title">أرسل سؤالك</h3>
+    <form action="/ask" method="POST">
+      <div class="mb-2"><label>الاسم</label><input name="name" class="form-control" required></div>
+      <div class="mb-2"><label>البريد الإلكتروني</label><input name="email" type="email" class="form-control" required></div>
+      <div class="mb-2"><label>السؤال</label><textarea name="question" class="form-control" rows="6" required></textarea></div>
+      <button class="btn btn-brown">أرسل سؤالك</button>
     </form></div>`;
   res.send(renderClassic('أرسل سؤالك', form));
 });
@@ -598,7 +653,7 @@ app.post('/ask', async (req,res) => {
   const email = sanitizeHtmlSafe((req.body.email||'').trim());
   const question = sanitizeHtmlSafe((req.body.question||'').trim());
   if (!name || !email || !question) {
-    return res.send(renderClassic('خطأ', '<div class=\"classic-card text-danger\">الرجاء تعبئة جميع الحقول</div>'));
+    return res.send(renderClassic('خطأ', '<div class="classic-card text-danger">الرجاء تعبئة جميع الحقول</div>'));
   }
   const qs = load('questions') || [];
   let shortId = generateShortId();
@@ -608,12 +663,12 @@ app.post('/ask', async (req,res) => {
   qs.push(item);
   save('questions', qs);
   const fullLink = `${req.protocol}://${req.get('host')}/question/${shortId}`;
-  const body = `<div class=\"classic-card\"><h3 class=\"section-title\">تم استلام سؤالك</h3>
+  const body = `<div class="classic-card"><h3 class="section-title">تم استلام سؤالك</h3>
     <p>شكراً لك — تم استلام السؤال. يمكنك متابعة الإجابة عبر الرابط التالي:</p>
-    <div style=\"background:#f8f8f8;padding:12px;border-radius:8px;word-break:break-all;\">
-      <a href=\"${fullLink}\">${fullLink}</a>
+    <div style="background:#f8f8f8;padding:12px;border-radius:8px;word-break:break-all;">
+      <a href="${fullLink}">${fullLink}</a>
     </div>
-    <p class=\"mt-3\"><a href=\"/\" class=\"btn btn-gold\">العودة للرئيسية</a></p>
+    <p class="mt-3"><a href="/" class="btn btn-gold">العودة للرئيسية</a></p>
   </div>`;
   res.send(renderClassic('تم الاستلام', body));
 });
@@ -622,9 +677,9 @@ app.get('/question/:shortId', (req,res) => {
   const shortId = String(req.params.shortId || '');
   const qs = load('questions') || [];
   const q = qs.find(x => String(x.shortId) === shortId);
-  if (!q) return res.status(404).send(renderClassic('غير موجود', '<div class=\"classic-card\">السؤال غير موجود</div>'));
-  const answerBlock = q.answer && q.answer.trim() ? `<h5>الجواب:</h5><div class=\"card-modern\" style=\"white-space:pre-wrap;\">${esc(q.answer)}</div>` : `<p style=\"color:gray;\">لم يتم الرد بعد — راجع هذا الرابط لاحقًا.</p>`;
-  const body = `<div class=\"classic-card\"><h3 class=\"section-title\">سؤالك</h3><p><strong>من:</strong> ${esc(q.name)}</p><div class=\"card-modern\" style=\"white-space:pre-wrap;\">${esc(q.question)}</div><div class=\"mt-3\">${answerBlock}</div></div>`;
+  if (!q) return res.status(404).send(renderClassic('غير موجود', '<div class="classic-card">السؤال غير موجود</div>'));
+  const answerBlock = q.answer && q.answer.trim() ? `<h5>الجواب:</h5><div class="card-modern" style="white-space:pre-wrap;">${esc(q.answer)}</div>` : `<p style="color:gray;">لم يتم الرد بعد — راجع هذا الرابط لاحقًا.</p>`;
+  const body = `<div class="classic-card"><h3 class="section-title">سؤالك</h3><p><strong>من:</strong> ${esc(q.name)}</p><div class="card-modern" style="white-space:pre-wrap;">${esc(q.question)}</div><div class="mt-3">${answerBlock}</div></div>`;
   res.send(renderClassic('عرض السؤال', body));
 });
 
@@ -634,11 +689,11 @@ function requireAdmin(req,res,next) {
   next();
 }
 app.get('/admin/login', (req,res) => {
-  const form = `<div class=\"classic-card\"><h3 class=\"section-title\">دخول المدير</h3>
-    <form method=\"POST\" action=\"/admin/login\">
-      <div class=\"mb-2\"><input name=\"user\" class=\"form-control\" placeholder=\"اسم المستخدم\" required></div>
-      <div class=\"mb-2\"><input name=\"pass\" type=\"password\" class=\"form-control\" placeholder=\"كلمة السر\" required></div>
-      <button class=\"btn btn-brown\">دخول</button>
+  const form = `<div class="classic-card"><h3 class="section-title">دخول المدير</h3>
+    <form method="POST" action="/admin/login">
+      <div class="mb-2"><input name="user" class="form-control" placeholder="اسم المستخدم" required></div>
+      <div class="mb-2"><input name="pass" type="password" class="form-control" placeholder="كلمة السر" required></div>
+      <button class="btn btn-brown">دخول</button>
     </form></div>`;
   res.send(renderClassic('دخول الادمن', form));
 });
@@ -646,44 +701,44 @@ app.post('/admin/login', (req,res) => {
   const u = (req.body.user||'').trim();
   const p = (req.body.pass||'').trim();
   if (u === ADMIN_USER && p === ADMIN_PASS) { req.session.isAdmin = true; return res.redirect('/admin'); }
-  res.send(renderClassic('خطأ', '<div class=\"classic-card text-danger\">بيانات الدخول خاطئة</div>'));
+  res.send(renderClassic('خطأ', '<div class="classic-card text-danger">بيانات الدخول خاطئة</div>'));
 });
 app.get('/admin/logout', (req,res) => { req.session.isAdmin = false; res.redirect('/admin/login'); });
 
 app.get('/admin', requireAdmin, (req,res) => {
   const fatwas = load('fatwas'), articles = load('articles'), videos = load('videos'), khutbahs = load('khutbahs'), questions = load('questions');
-  const body = `<div class=\"classic-card\"><h3 class=\"section-title\">لوحة التحكم</h3>
-    <div class=\"row\">
-      <div class=\"col-md-2\"><div class=\"card p-3\"><h6>الفتاوى</h6><p class=\"h4\">${fatwas.length}</p><a class=\"btn btn-sm btn-outline-brown\" href=\"/admin/manage/fatwas\">إدارة</a></div></div>
-      <div class=\"col-md-2\"><div class=\"card p-3\"><h6>المقالات</h6><p class=\"h4\">${articles.length}</p><a class=\"btn btn-sm btn-outline-brown\" href=\"/admin/manage/articles\">إدارة</a></div></div>
-      <div class=\"col-md-2\"><div class=\"card p-3\"><h6>الفيديوهات</h6><p class=\"h4\">${videos.length}</p><a class=\"btn btn-sm btn-outline-brown\" href=\"/admin/manage/videos\">إدارة</a></div></div>
-      <div class=\"col-md-2\"><div class=\"card p-3\"><h6>الخطب</h6><p class=\"h4\">${khutbahs.length}</p><a class=\"btn btn-sm btn-outline-brown\" href=\"/admin/manage/khutbahs\">إدارة</a></div></div>
-      <div class=\"col-md-2\"><div class=\"card p-3\"><h6>الأسئلة</h6><p class=\"h4\">${questions.length}</p><a class=\"btn btn-sm btn-danger\" href=\"/admin/questions\">عرض</a></div></div>
+  const body = `<div class="classic-card"><h3 class="section-title">لوحة التحكم</h3>
+    <div class="row">
+      <div class="col-md-2"><div class="card p-3"><h6>الفتاوى</h6><p class="h4">${fatwas.length}</p><a class="btn btn-sm btn-outline-brown" href="/admin/manage/fatwas">إدارة</a></div></div>
+      <div class="col-md-2"><div class="card p-3"><h6>المقالات</h6><p class="h4">${articles.length}</p><a class="btn btn-sm btn-outline-brown" href="/admin/manage/articles">إدارة</a></div></div>
+      <div class="col-md-2"><div class="card p-3"><h6>الفيديوهات</h6><p class="h4">${videos.length}</p><a class="btn btn-sm btn-outline-brown" href="/admin/manage/videos">إدارة</a></div></div>
+      <div class="col-md-2"><div class="card p-3"><h6>الخطب</h6><p class="h4">${khutbahs.length}</p><a class="btn btn-sm btn-outline-brown" href="/admin/manage/khutbahs">إدارة</a></div></div>
+      <div class="col-md-2"><div class="card p-3"><h6>الأسئلة</h6><p class="h4">${questions.length}</p><a class="btn btn-sm btn-danger" href="/admin/questions">عرض</a></div></div>
     </div></div>`;
   res.send(renderClassic('لوحة الادمن', body, { admin:true }));
 });
 
 app.get('/admin/manage/:type', requireAdmin, (req,res) => {
   const type = req.params.type;
-  if (!MANAGED_TYPES.includes(type)) return res.status(404).send(renderClassic('خطأ','<div class=\"classic-card\">نوع غير معروف</div>', { admin:true }));
+  if (!MANAGED_TYPES.includes(type)) return res.status(404).send(renderClassic('خطأ','<div class="classic-card">نوع غير معروف</div>', { admin:true }));
   const items = load(type) || [];
   let addFields = '';
-  if (type === 'videos') addFields = `<div class=\"mb-2\"><label>رابط يوتيوب أو ID</label><input name=\"url\" class=\"form-control\" placeholder=\"https://www.youtube.com/watch?v=... أو ID\"></div>`;
-  if (type === 'khutbahs') addFields = `<div class=\"mb-2\"><label>رفع ملف PDF</label><input type=\"file\" name=\"file\" accept=\"application/pdf\" class=\"form-control\"></div>`;
+  if (type === 'videos') addFields = `<div class="mb-2"><label>رابط يوتيوب أو ID</label><input name="url" class="form-control" placeholder="https://www.youtube.com/watch?v=... أو ID"></div>`;
+  if (type === 'khutbahs') addFields = `<div class="mb-2"><label>رفع ملف PDF</label><input type="file" name="file" accept="application/pdf" class="form-control"></div>`;
   const rows = items.length ? items.map(i=>`<tr><td>${i.id}</td><td>${esc(i.title||i.name||'')}</td><td>${esc(i.createdAt||'')}</td><td>
-    <form method=\"post\" action=\"/admin/delete/${type}/${i.id}\" onsubmit=\"return confirm('حذف؟')\" style=\"display:inline;\"><button class=\"btn btn-sm btn-danger\">حذف</button></form>
-  </td></tr>`).join('') : `<tr><td colspan=\"4\">لا توجد عناصر حتى الآن.</td></tr>`;
-  const addForm = (type !== 'questions') ? `<h5 class=\"mt-3\">إضافة جديد</h5>
-    <form method=\"post\" action=\"/admin/add/${type}\" ${type==='khutbahs'?'enctype=\"multipart/form-data\"':''}>
-      <div class=\"mb-2\"><input name=\"title\" class=\"form-control\" placeholder=\"العنوان\" required></div>
-      <div class=\"mb-2\"><textarea name=\"content\" class=\"form-control\" placeholder=\"المحتوى / الوصف\"></textarea></div>
+    <form method="post" action="/admin/delete/${type}/${i.id}" onsubmit="return confirm('حذف؟')" style="display:inline;"><button class="btn btn-sm btn-danger">حذف</button></form>
+  </td></tr>`).join('') : `<tr><td colspan="4">لا توجد عناصر حتى الآن.</td></tr>`;
+  const addForm = (type !== 'questions') ? `<h5 class="mt-3">إضافة جديد</h5>
+    <form method="post" action="/admin/add/${type}" ${type==='khutbahs'?'enctype="multipart/form-data"':''}>
+      <div class="mb-2"><input name="title" class="form-control" placeholder="العنوان" required></div>
+      <div class="mb-2"><textarea name="content" class="form-control" placeholder="المحتوى / الوصف"></textarea></div>
       ${addFields}
-      <button class=\"btn btn-success\">إضافة</button>
+      <button class="btn btn-success">إضافة</button>
     </form>` : '';
-  const body = `<div class=\"classic-card\"><h3>إدارة ${esc(type)}</h3>
-    <table class=\"table\"><thead><tr><th>ID</th><th>العنوان</th><th>تاريخ</th><th>إجراء</th></tr></thead><tbody>${rows}</tbody></table>
+  const body = `<div class="classic-card"><h3>إدارة ${esc(type)}</h3>
+    <table class="table"><thead><tr><th>ID</th><th>العنوان</th><th>تاريخ</th><th>إجراء</th></tr></thead><tbody>${rows}</tbody></table>
     ${addForm}
-    <p><a href=\"/admin\" class=\"btn btn-outline-brown\">رجوع</a></p></div>`;
+    <p><a href="/admin" class="btn btn-outline-brown">رجوع</a></p></div>`;
   res.send(renderClassic('ادارة '+type, body, { admin:true }));
 });
 
@@ -716,7 +771,7 @@ app.post('/admin/add/khutbahs', requireAdmin, upload.single('file'), async (req,
     res.redirect('/admin/manage/khutbahs');
   } catch (e) {
     console.error('add khutbah error', e && e.message ? e.message : e);
-    res.status(500).send(renderClassic('خطأ','<div class=\"classic-card text-danger\">فشل رفع الخطبة</div>', { admin:true }));
+    res.status(500).send(renderClassic('خطأ','<div class="classic-card text-danger">فشل رفع الخطبة</div>', { admin:true }));
   }
 });
 
@@ -750,26 +805,26 @@ app.post('/admin/delete/:type/:id', requireAdmin, (req,res) => {
 // Admin questions listing and management
 app.get('/admin/questions', requireAdmin, (req,res) => {
   const qs = load('questions') || [];
-  const rows = qs.map(q=>`<tr><td>${q.id}</td><td>${esc(q.name)}</td><td>${esc(q.email)}</td><td>${esc((q.question||'').substring(0,80))}...</td><td>${esc(q.createdAt||'')}</td><td><a class=\"btn btn-sm btn-primary\" href=\"/admin/question/${q.id}\">عرض</a></td></tr>`).join('') || `<tr><td colspan=\"6\">لا توجد أسئلة</td></tr>`;
-  const body = `<div class=\"classic-card\"><h3 class=\"section-title\">أسئلة الزوار</h3><table class=\"table\"><thead><tr><th>ID</th><th>الاسم</th><th>البريد</th><th>مقتطف</th><th>التاريخ</th><th>عرض</th></tr></thead><tbody>${rows}</tbody></table><p><a href=\"/admin\" class=\"btn btn-outline-brown\">رجوع</a></p></div>`;
+  const rows = qs.map(q=>`<tr><td>${q.id}</td><td>${esc(q.name)}</td><td>${esc(q.email)}</td><td>${esc((q.question||'').substring(0,80))}...</td><td>${esc(q.createdAt||'')}</td><td><a class="btn btn-sm btn-primary" href="/admin/question/${q.id}">عرض</a></td></tr>`).join('') || `<tr><td colspan="6">لا توجد أسئلة</td></tr>`;
+  const body = `<div class="classic-card"><h3 class="section-title">أسئلة الزوار</h3><table class="table"><thead><tr><th>ID</th><th>الاسم</th><th>البريد</th><th>مقتطف</th><th>التاريخ</th><th>عرض</th></tr></thead><tbody>${rows}</tbody></table><p><a href="/admin" class="btn btn-outline-brown">رجوع</a></p></div>`;
   res.send(renderClassic('اسئلة الزوار', body, { admin:true }));
 });
 
 app.get('/admin/question/:id', requireAdmin, (req,res) => {
   const qs = load('questions') || [];
   const q = qs.find(x=>String(x.id)===String(req.params.id));
-  if (!q) return res.send(renderClassic('خطأ','<div class=\"classic-card\">السؤال غير موجود</div>', { admin:true }));
-  const replyBlock = q.answer ? `<h5>الرد:</h5><div class=\"p-2\" style=\"background:#e9ffe9;white-space:pre-wrap;\">${esc(q.answer)}</div>` : '';
-  const body = `<div class=\"classic-card\"><h4 class=\"section-title\">عرض السؤال</h4>
+  if (!q) return res.send(renderClassic('خطأ','<div class="classic-card">السؤال غير موجود</div>', { admin:true }));
+  const replyBlock = q.answer ? `<h5>الرد:</h5><div class="p-2" style="background:#e9ffe9;white-space:pre-wrap;">${esc(q.answer)}</div>` : '';
+  const body = `<div class="classic-card"><h4 class="section-title">عرض السؤال</h4>
     <p><strong>الاسم:</strong> ${esc(q.name)}<br><strong>البريد:</strong> ${esc(q.email)}<br><strong>التاريخ:</strong> ${esc(q.createdAt)}</p>
-    <p><strong>رابط المتابعة:</strong> <a href=\"/question/${q.shortId}\">/question/${q.shortId}</a></p>
-    <h5>السؤال:</h5><div class=\"p-2\" style=\"background:#f8f8f0;white-space:pre-wrap;\">${esc(q.question)}</div>
+    <p><strong>رابط المتابعة:</strong> <a href="/question/${q.shortId}">/question/${q.shortId}</a></p>
+    <h5>السؤال:</h5><div class="p-2" style="background:#f8f8f0;white-space:pre-wrap;">${esc(q.question)}</div>
     ${replyBlock}
-    <div class=\"mt-3\">
-      <a class=\"btn btn-success\" href=\"/admin/question/${q.id}/reply\">رد</a>
-      <a class=\"btn btn-primary\" href=\"/admin/question/${q.id}/tofatwa\">تحويل إلى فتوى</a>
-      <a class=\"btn btn-danger\" href=\"/admin/question/${q.id}/delete\" onclick=\"return confirm('حذف؟')\">حذف</a>
-      <a class=\"btn btn-secondary\" href=\"/admin/questions\">رجوع</a>
+    <div class="mt-3">
+      <a class="btn btn-success" href="/admin/question/${q.id}/reply">رد</a>
+      <a class="btn btn-primary" href="/admin/question/${q.id}/tofatwa">تحويل إلى فتوى</a>
+      <a class="btn btn-danger" href="/admin/question/${q.id}/delete" onclick="return confirm('حذف؟')">حذف</a>
+      <a class="btn btn-secondary" href="/admin/questions">رجوع</a>
     </div>
   </div>`;
   res.send(renderClassic('عرض السؤال', body, { admin:true }));
@@ -778,12 +833,12 @@ app.get('/admin/question/:id', requireAdmin, (req,res) => {
 app.get('/admin/question/:id/reply', requireAdmin, (req,res) => {
   const qs = load('questions') || [];
   const q = qs.find(x=>String(x.id)===String(req.params.id));
-  if (!q) return res.send(renderClassic('خطأ','<div class=\"classic-card\">السؤال غير موجود</div>', { admin:true }));
-  const body = `<div class=\"classic-card\"><h4 class=\"section-title\">الرد على السؤال</h4>
-    <form method=\"POST\" action=\"/admin/question/${q.id}/reply\">
-      <div class=\"mb-2\"><textarea name=\"answer\" class=\"form-control\" rows=\"6\">${esc(q.answer||'')}</textarea></div>
-      <button class=\"btn btn-brown\">حفظ الرد</button>
-      <a class=\"btn btn-secondary\" href=\"/admin/question/${q.id}\">إلغاء</a>
+  if (!q) return res.send(renderClassic('خطأ','<div class="classic-card">السؤال غير موجود</div>', { admin:true }));
+  const body = `<div class="classic-card"><h4 class="section-title">الرد على السؤال</h4>
+    <form method="POST" action="/admin/question/${q.id}/reply">
+      <div class="mb-2"><textarea name="answer" class="form-control" rows="6">${esc(q.answer||'')}</textarea></div>
+      <button class="btn btn-brown">حفظ الرد</button>
+      <a class="btn btn-secondary" href="/admin/question/${q.id}">إلغاء</a>
     </form></div>`;
   res.send(renderClassic('رد على السؤال', body, { admin:true }));
 });
@@ -791,7 +846,7 @@ app.get('/admin/question/:id/reply', requireAdmin, (req,res) => {
 app.post('/admin/question/:id/reply', requireAdmin, (req,res) => {
   const qs = load('questions') || [];
   const idx = qs.findIndex(x=>String(x.id)===String(req.params.id));
-  if (idx === -1) return res.send(renderClassic('خطأ','<div class=\"classic-card\">السؤال غير موجود</div>', { admin:true }));
+  if (idx === -1) return res.send(renderClassic('خطأ','<div class="classic-card">السؤال غير موجود</div>', { admin:true }));
   qs[idx].answer = sanitizeHtmlSafe(req.body.answer || '');
   qs[idx].answeredAt = new Date().toISOString();
   qs[idx].status = 'answered';
@@ -809,7 +864,7 @@ app.get('/admin/question/:id/delete', requireAdmin, (req,res) => {
 app.get('/admin/question/:id/tofatwa', requireAdmin, (req,res) => {
   const qs = load('questions') || [];
   const q = qs.find(x=>String(x.id)===String(req.params.id));
-  if (!q) return res.send(renderClassic('خطأ','<div class=\"classic-card\">السؤال غير موجود</div>', { admin:true }));
+  if (!q) return res.send(renderClassic('خطأ','<div class="classic-card">السؤال غير موجود</div>', { admin:true }));
   const fatwas = load('fatwas') || [];
   fatwas.push({ id: Date.now(), title: `سؤال من: ${q.name}`, content: `${q.question}\n\n---\nالجواب:\n${q.answer||'لم يتم الرد بعد'}`, createdAt: new Date().toISOString() });
   save('fatwas', fatwas);
@@ -830,73 +885,73 @@ app.get('/admin/json', requireAdmin, (req,res) => {
     return { name: f.replace(/\.json$/,''), mtime: stat.mtime.toISOString(), size: stat.size };
   });
   const rows = files.map(f => `<tr><td>${esc(f.name)}</td><td>${esc(f.mtime)}</td><td>${f.size} بايت</td><td>
-    <a class=\"btn btn-sm btn-outline-brown\" href=\"/admin/json/${encodeURIComponent(f.name)}\">تحرير</a>
-    <a class=\"btn btn-sm btn-secondary\" href=\"/admin/json/${encodeURIComponent(f.name)}/download\">تحميل</a>
-    </td></tr>`).join('') || '<tr><td colspan=\"4\">لا توجد ملفات JSON</td></tr>';
-  const body = `<div class=\"classic-card\"><h3 class=\"section-title\">ملفات JSON</h3>
-    <table class=\"table\"><thead><tr><th>الاسم</th><th>آخر تعديل</th><th>الحجم</th><th>إجراء</th></tr></thead><tbody>${rows}</tbody></table>
-    <h5 class=\"mt-3\">إنشاء ملف JSON جديد</h5>
-    <form method=\"POST\" action=\"/admin/json/create\">
-      <div class=\"mb-2\"><input name=\"name\" class=\"form-control\" placeholder=\"اسم الملف (بدون .json)\" required></div>
-      <div class=\"mb-2\"><textarea name=\"content\" class=\"form-control\" rows=\"8\" placeholder='محتوى JSON مثل {\"key\":\"value\"}'></textarea></div>
-      <button class=\"btn btn-success\">إنشاء وحفظ</button>
+    <a class="btn btn-sm btn-outline-brown" href="/admin/json/${encodeURIComponent(f.name)}">تحرير</a>
+    <a class="btn btn-sm btn-secondary" href="/admin/json/${encodeURIComponent(f.name)}/download">تحميل</a>
+    </td></tr>`).join('') || '<tr><td colspan="4">لا توجد ملفات JSON</td></tr>';
+  const body = `<div class="classic-card"><h3 class="section-title">ملفات JSON</h3>
+    <table class="table"><thead><tr><th>الاسم</th><th>آخر تعديل</th><th>الحجم</th><th>إجراء</th></tr></thead><tbody>${rows}</tbody></table>
+    <h5 class="mt-3">إنشاء ملف JSON جديد</h5>
+    <form method="POST" action="/admin/json/create">
+      <div class="mb-2"><input name="name" class="form-control" placeholder="اسم الملف (بدون .json)" required></div>
+      <div class="mb-2"><textarea name="content" class="form-control" rows="8" placeholder='محتوى JSON مثل {"key":"value"}'></textarea></div>
+      <button class="btn btn-success">إنشاء وحفظ</button>
     </form>
-    <p class=\"mt-3\"><a href=\"/admin\" class=\"btn btn-outline-brown\">رجوع</a></p>
+    <p class="mt-3"><a href="/admin" class="btn btn-outline-brown">رجوع</a></p>
   </div>`;
   res.send(renderClassic('مدير JSON', body, { admin:true }));
 });
 
 app.get('/admin/json/:name/download', requireAdmin, (req,res) => {
   const name = safeJsonFilename(req.params.name);
-  if (!name) return res.status(400).send(renderClassic('خطأ','<div class=\"classic-card\">اسم غير صالح</div>', { admin:true }));
+  if (!name) return res.status(400).send(renderClassic('خطأ','<div class="classic-card">اسم غير صالح</div>', { admin:true }));
   const p = path.join(DATA_DIR, name + '.json');
-  if (!fs.existsSync(p)) return res.status(404).send(renderClassic('غير موجود','<div class=\"classic-card\">الملف غير موجود</div>', { admin:true }));
+  if (!fs.existsSync(p)) return res.status(404).send(renderClassic('غير موجود','<div class="classic-card">الملف غير موجود</div>', { admin:true }));
   res.download(p, `${name}.json`);
 });
 
 app.get('/admin/json/:name', requireAdmin, (req,res) => {
   const name = safeJsonFilename(req.params.name);
-  if (!name) return res.status(400).send(renderClassic('خطأ','<div class=\"classic-card\">اسم غير صالح</div>', { admin:true }));
+  if (!name) return res.status(400).send(renderClassic('خطأ','<div class="classic-card">اسم غير صالح</div>', { admin:true }));
   const p = path.join(DATA_DIR, name + '.json');
   const raw = fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : '';
-  const body = `<div class=\"classic-card\"><h3 class=\"section-title\">تحرير ${esc(name)}.json</h3>
-    <form method=\"POST\" action=\"/admin/json/${encodeURIComponent(name)}/save\">
-      <div class=\"mb-2\"><textarea name=\"content\" class=\"form-control\" rows=\"20\" style=\"font-family:monospace;\">${esc(raw)}</textarea></div>
-      <button class=\"btn btn-brown\">حفظ الملف</button>
-      <a class=\"btn btn-secondary\" href=\"/admin/json\">إلغاء</a>
+  const body = `<div class="classic-card"><h3 class="section-title">تحرير ${esc(name)}.json</h3>
+    <form method="POST" action="/admin/json/${encodeURIComponent(name)}/save">
+      <div class="mb-2"><textarea name="content" class="form-control" rows="20" style="font-family:monospace;">${esc(raw)}</textarea></div>
+      <button class="btn btn-brown">حفظ الملف</button>
+      <a class="btn btn-secondary" href="/admin/json">إلغاء</a>
     </form>
-    <p class=\"mt-3 text-muted\">سيتم التحقق من صحة JSON قبل الحفظ. نسخة احتياطية تؤخذ تلقائياً.</p>
+    <p class="mt-3 text-muted">سيتم التحقق من صحة JSON قبل الحفظ. نسخة احتياطية تؤخذ تلقائياً.</p>
   </div>`;
   res.send(renderClassic('تحرير JSON', body, { admin:true }));
 });
 
 app.post('/admin/json/:name/save', requireAdmin, (req,res) => {
   const name = safeJsonFilename(req.params.name);
-  if (!name) return res.status(400).send(renderClassic('خطأ','<div class=\"classic-card\">اسم غير صالح</div>', { admin:true }));
+  if (!name) return res.status(400).send(renderClassic('خطأ','<div class="classic-card">اسم غير صالح</div>', { admin:true }));
   const content = req.body.content || '';
   try { JSON.parse(content); } catch (e) {
-    const body = `<div class=\"classic-card\"><h3 class=\"section-title\">خطأ في JSON</h3><p class=\"text-danger\">تعذر حفظ الملف — JSON غير صالح: ${esc(e.message)}</p><p><a href=\"/admin/json/${encodeURIComponent(name)}\" class=\"btn btn-secondary\">العودة والتصحيح</a></p></div>`;
+    const body = `<div class="classic-card"><h3 class="section-title">خطأ في JSON</h3><p class="text-danger">تعذر حفظ الملف — JSON غير صالح: ${esc(e.message)}</p><p><a href="/admin/json/${encodeURIComponent(name)}" class="btn btn-secondary">العودة والتصحيح</a></p></div>`;
     return res.send(renderClassic('خطأ في JSON', body, { admin:true }));
   }
   try {
     const p = path.join(DATA_DIR, name + '.json');
     if (fs.existsSync(p)) { const bak = path.join(BACKUPS_DIR, `${name}-${Date.now()}.json`); fs.copyFileSync(p, bak); }
     fs.writeFileSync(path.join(DATA_DIR, name + '.json'), content, 'utf8');
-    res.send(renderClassic('تم الحفظ', `<div class=\"classic-card\"><h3 class=\"section-title\">تم الحفظ</h3><p>تم حفظ ${esc(name)}.json بنجاح.</p><p><a href=\"/admin/json\" class=\"btn btn-outline-brown\">العودة</a></p></div>`, { admin:true }));
+    res.send(renderClassic('تم الحفظ', `<div class="classic-card"><h3 class="section-title">تم الحفظ</h3><p>تم حفظ ${esc(name)}.json بنجاح.</p><p><a href="/admin/json" class="btn btn-outline-brown">العودة</a></p></div>`, { admin:true }));
   } catch (e) {
     console.error('save json error', e && e.message ? e.message : e);
-    res.status(500).send(renderClassic('خطأ','<div class=\"classic-card text-danger\">فشل الحفظ</div>', { admin:true }));
+    res.status(500).send(renderClassic('خطأ','<div class="classic-card text-danger">فشل الحفظ</div>', { admin:true }));
   }
 });
 
 app.post('/admin/json/create', requireAdmin, (req,res) => {
   const name = safeJsonFilename((req.body.name||'').trim());
   const content = req.body.content || '';
-  if (!name) return res.status(400).send(renderClassic('خطأ','<div class=\"classic-card\">اسم ملف غير صالح، استخدم أحرف وأرقام و-_ فقط</div>', { admin:true }));
+  if (!name) return res.status(400).send(renderClassic('خطأ','<div class="classic-card">اسم ملف غير صالح، استخدم أحرف وأرقام و-_ فقط</div>', { admin:true }));
   const p = path.join(DATA_DIR, name + '.json');
-  if (fs.existsSync(p)) return res.send(renderClassic('خطأ','<div class=\"classic-card text-danger\">الملف موجود بالفعل</div>', { admin:true }));
+  if (fs.existsSync(p)) return res.send(renderClassic('خطأ','<div class="classic-card text-danger">الملف موجود بالفعل</div>', { admin:true }));
   if (content.trim()) {
-    try { JSON.parse(content); } catch (e) { return res.send(renderClassic('خطأ','<div class=\"classic-card text-danger\">محتوى JSON غير صالح: '+esc(e.message)+'</div>', { admin:true })); }
+    try { JSON.parse(content); } catch (e) { return res.send(renderClassic('خطأ','<div class="classic-card text-danger">محتوى JSON غير صالح: '+esc(e.message)+'</div>', { admin:true })); }
     fs.writeFileSync(p, content, 'utf8');
     res.redirect('/admin/json');
   } else {
@@ -907,14 +962,14 @@ app.post('/admin/json/create', requireAdmin, (req,res) => {
 
 // 404 handler
 app.use((req, res) => {
-  res.status(404).send(renderClassic('غير موجود', '<div class=\"classic-card\">الصفحة غير موجودة</div>'));
+  res.status(404).send(renderClassic('غير موجود', '<div class="classic-card">الصفحة غير موجودة</div>'));
 });
 
 // error handler
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err && err.stack ? err.stack : err);
   try {
-    res.status(500).send(renderClassic('خطأ', '<div class=\"classic-card text-danger\">حدث خطأ في الخادم. الرجاء المحاولة لاحقًا.</div>'));
+    res.status(500).send(renderClassic('خطأ', '<div class="classic-card text-danger">حدث خطأ في الخادم. الرجاء المحاولة لاحقًا.</div>'));
   } catch (e) {
     res.status(500).send('Server error');
   }
@@ -926,5 +981,3 @@ app.listen(PORT, () => {
   console.log(`Admin credentials: ${ADMIN_USER} / ${ADMIN_PASS}`);
   console.log(`Data dir: ${DATA_DIR} (persistent disk: ${USE_PERSISTENT_DISK})`);
 });
-"
-Observation: Create successful: /app/server.js
